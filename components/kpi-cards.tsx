@@ -1,81 +1,56 @@
 "use client"
 
+import { useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowDown, ArrowUp, MousePointerClick, Eye, BarChart } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export function KpiCards() {
-  // This would be fetched from your API
-  const kpiData = {
-    "7days": {
-      impressions: {
-        value: 198_900,
-        change: 8.9,
-        increasing: true,
-      },
-      clicks: {
-        value: 2_200_000,
-        change: 9.1,
-        increasing: true,
-      },
-      ctr: {
-        value: 8.9,
-        change: 0.2,
-        increasing: true,
-      },
-    },
-    "28days": {
-      impressions: {
-        value: 660_900,
-        change: 7.4,
-        increasing: true,
-      },
-      clicks: {
-        value: 8_900_000,
-        change: 8.2,
-        increasing: true,
-      },
-      ctr: {
-        value: 7.4,
-        change: -0.3,
-        increasing: false,
-      },
-    },
-    "90days": {
-      impressions: {
-        value: 1_400_000,
-        change: 6.8,
-        increasing: true,
-      },
-      clicks: {
-        value: 20_500_000,
-        change: 7.5,
-        increasing: true,
-      },
-      ctr: {
-        value: 6.8,
-        change: 0.1,
-        increasing: true,
-      },
-    },
-    "180days": {
-      impressions: {
-        value: 2_100_000,
-        change: 6.8,
-        increasing: true,
-      },
-      clicks: {
-        value: 30_800_000,
-        change: 7.2,
-        increasing: true,
-      },
-      ctr: {
-        value: 6.8,
-        change: -0.1,
-        increasing: false,
-      },
-    },
+export function KpiCards({ data }: { data: any[] }) {
+  // Helper to parse numbers safely
+  const parseNumber = (value: string | number) => {
+    if (typeof value === "number") return value
+    return parseInt(value.toString().replace(/,/g, "")) || 0
   }
+
+  // Aggregates by period (7, 28, 90, 180 days)
+  const kpiData = useMemo(() => {
+    const now = new Date()
+    const periods = [7, 28, 90, 180]
+    const result: Record<string, any> = {}
+
+    periods.forEach((days) => {
+      const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+      const filtered = data.filter((row) => {
+        const dateStr = row[8] || row[9] // Published or Updated Date
+        const date = new Date(dateStr)
+        return date >= from && date <= now
+      })
+
+      const clicks = filtered.reduce((sum, row) => sum + parseNumber(row[3]), 0)
+      const impressions = filtered.reduce((sum, row) => sum + parseNumber(row[4]), 0)
+      const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
+
+      result[`${days}days`] = {
+        impressions: {
+          value: impressions,
+          change: 0,
+          increasing: true,
+        },
+        clicks: {
+          value: clicks,
+          change: 0,
+          increasing: true,
+        },
+        ctr: {
+          value: ctr,
+          change: 0,
+          increasing: true,
+        },
+      }
+    })
+
+    return result
+  }, [data])
 
   return (
     <Card>
@@ -163,4 +138,3 @@ export function KpiCards() {
     </Card>
   )
 }
-
