@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Header } from "@/components/header"
 import { KpiCards } from "@/components/kpi-cards"
 import { TrendsChart } from "@/components/trends-chart"
@@ -20,6 +20,39 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState<string>("March 2025")
   const [selectedPreset, setSelectedPreset] = useState<string>("last28days")
 
+  const [googleData, setGoogleData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch("https://script.google.com/macros/s/AKfycbykko6EP2hc6QXisfVmHyUeEQPkRBuhJNshs9troTxjpcjlzQbGSBAKL56Y2rPrYsLa/exec")
+      .then((res) => res.json())
+      .then((data) => {
+        setGoogleData(data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError("Failed to fetch Google Discover data.")
+        setLoading(false)
+      })
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-lg font-medium">Loading Google Discover data…</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-red-500 font-medium">{error}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -36,7 +69,7 @@ export default function Dashboard() {
           />
         </div>
 
-        <KpiCards />
+        <KpiCards data={googleData} />
 
         <Tabs defaultValue="trends" className="space-y-4">
           <TabsList>
@@ -45,13 +78,13 @@ export default function Dashboard() {
             <TabsTrigger value="authors">Author Performance</TabsTrigger>
           </TabsList>
           <TabsContent value="trends" className="space-y-4">
-            <TrendsChart dateRange={dateRange} selectedMonth={selectedMonth} />
+            <TrendsChart data={googleData} dateRange={dateRange} selectedMonth={selectedMonth} />
           </TabsContent>
           <TabsContent value="content" className="space-y-4">
-            <ContentTable dateRange={dateRange} selectedMonth={selectedMonth} />
+            <ContentTable data={googleData} dateRange={dateRange} selectedMonth={selectedMonth} />
           </TabsContent>
           <TabsContent value="authors" className="space-y-4">
-            <AuthorPerformance dateRange={dateRange} selectedMonth={selectedMonth} />
+            <AuthorPerformance data={googleData} dateRange={dateRange} selectedMonth={selectedMonth} />
           </TabsContent>
         </Tabs>
       </main>
@@ -59,4 +92,3 @@ export default function Dashboard() {
     </div>
   )
 }
-
