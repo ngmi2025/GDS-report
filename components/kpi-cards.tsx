@@ -1,12 +1,10 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useMemo } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ArrowDown, ArrowUp, MousePointerClick, Eye, BarChart, Minus } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatNumber } from "@/lib/utils"
-import { ArrowDown, ArrowUp, Minus } from "lucide-react"
-
-interface KpiCardsProps {
-  sheetName: string;
-}
 
 function calculatePercentageChange(current: number, previous: number): number {
   if (previous === 0) return 0
@@ -35,64 +33,119 @@ function PercentageChange({ value }: { value: number }) {
   )
 }
 
-export function KpiCards({ sheetName }: KpiCardsProps) {
-  // Dummy data - will be replaced with GSC data later
-  const kpiData = {
-    current: {
-      clicks: 42156,
-      impressions: 856234,
-      ctr: 4.92,
-      position: 3.2
-    },
-    previous: {
-      clicks: 39876,
-      impressions: 802345,
-      ctr: 4.97,
-      position: 3.4
-    }
+export function KpiCards({ data }: { data: any[] }) {
+  // Helper to parse numbers safely
+  const parseNumber = (value: string | number) => {
+    if (typeof value === "number") return value
+    return parseInt(value.toString().replace(/,/g, "")) || 0
   }
 
-  const metrics = [
-    {
-      title: "Clicks",
-      value: kpiData.current.clicks,
-      change: calculatePercentageChange(kpiData.current.clicks, kpiData.previous.clicks),
-      format: formatNumber
-    },
-    {
-      title: "Impressions",
-      value: kpiData.current.impressions,
-      change: calculatePercentageChange(kpiData.current.impressions, kpiData.previous.impressions),
-      format: formatNumber
-    },
-    {
-      title: "CTR",
-      value: kpiData.current.ctr,
-      change: calculatePercentageChange(kpiData.current.ctr, kpiData.previous.ctr),
-      format: (value: number) => `${value.toFixed(2)}%`
-    },
-    {
-      title: "Avg. Position",
-      value: kpiData.current.position,
-      change: calculatePercentageChange(kpiData.previous.position, kpiData.current.position), // Inverted because lower position is better
-      format: (value: number) => value.toFixed(1)
-    }
-  ]
+  // Aggregates by period (7, 28, 90, 180 days)
+  const kpiData = useMemo(() => {
+    const now = new Date()
+    const periods = [7, 28, 90, 180]
+    const result: Record<string, any> = {}
+
+    periods.forEach((days) => {
+      const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+      const filtered = data.filter((row) => {
+        const dateStr = row[8] || row[9] // Published or Updated Date
+        const date = new Date(dateStr)
+        return date >= from && date <= now
+      })
+
+      const clicks = filtered.reduce((sum, row) => sum + parseNumber(row[3]), 0)
+      const impressions = filtered.reduce((sum, row) => sum + parseNumber(row[4]), 0)
+      const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
+
+      result[`${days}days`] = {
+        impressions: {
+          value: impressions,
+          change: 0,
+          increasing: true,
+        },
+        clicks: {
+          value: clicks,
+          change: 0,
+          increasing: true,
+        },
+        ctr: {
+          value: ctr,
+          change: 0,
+          increasing: true,
+        },
+      }
+    })
+
+    return result
+  }, [data])
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {metrics.map((metric) => (
-        <Card key={metric.title}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{metric.title}</CardTitle>
-            <PercentageChange value={metric.change} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metric.format(metric.value)}</div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Performance Summary</CardTitle>
+        <CardDescription>Key metrics across different time periods</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="7days">
+          <TabsList className="grid grid-cols-4 mb-4">
+            <TabsTrigger value="7days">Last 7 days</TabsTrigger>
+            <TabsTrigger value="28days">Last 28 days</TabsTrigger>
+            <TabsTrigger value="90days">Last 90 days</TabsTrigger>
+            <TabsTrigger value="180days">Last 180 days</TabsTrigger>
+          </TabsList>
+          {Object.entries(kpiData).map(([period, metrics]) => (
+            <TabsContent key={period} value={period}>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <MousePointerClick className="h-4 w-4" />
+                        Clicks
+                      </div>
+                    </CardTitle>
+                    <PercentageChange value={metrics.clicks.change} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{formatNumber(metrics.clicks.value)}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        Impressions
+                      </div>
+                    </CardTitle>
+                    <PercentageChange value={metrics.impressions.change} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{formatNumber(metrics.impressions.value)}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <BarChart className="h-4 w-4" />
+                        CTR
+                      </div>
+                    </CardTitle>
+                    <PercentageChange value={metrics.ctr.change} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{metrics.ctr.value.toFixed(2)}%</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      </CardContent>
+    </Card>
   )
 }
-
