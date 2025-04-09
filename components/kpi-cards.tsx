@@ -33,30 +33,34 @@ function PercentageChange({ value }: { value: number }) {
   )
 }
 
-export function KpiCards({ data }: { data: any[] }) {
+export function KpiCards({ data = [] }: { data: any[] }) {
   // Helper to parse numbers safely
   const parseNumber = (value: string | number) => {
-    if (typeof value === "number") return value
-    return parseInt(value.toString().replace(/,/g, "")) || 0
-  }
+    if (typeof value === "number") return value;
+    return parseInt(value?.toString().replace(/,/g, "") || "0") || 0;
+  };
 
   // Aggregates by period (7, 28, 90, 180 days)
   const kpiData = useMemo(() => {
-    const now = new Date()
-    const periods = [7, 28, 90, 180]
-    const result: Record<string, any> = {}
+    if (!Array.isArray(data)) return {};
+    
+    const now = new Date();
+    const periods = [7, 28, 90, 180];
+    const result: Record<string, any> = {};
 
     periods.forEach((days) => {
-      const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+      const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       const filtered = data.filter((row) => {
-        const dateStr = row[8] || row[9] // Published or Updated Date
-        const date = new Date(dateStr)
-        return date >= from && date <= now
-      })
+        if (!row) return false;
+        const dateStr = row[8] || row[9]; // Published or Updated Date
+        if (!dateStr) return false;
+        const date = new Date(dateStr);
+        return date >= from && date <= now;
+      });
 
-      const clicks = filtered.reduce((sum, row) => sum + parseNumber(row[3]), 0)
-      const impressions = filtered.reduce((sum, row) => sum + parseNumber(row[4]), 0)
-      const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
+      const clicks = filtered.reduce((sum, row) => sum + parseNumber(row?.[3]), 0);
+      const impressions = filtered.reduce((sum, row) => sum + parseNumber(row?.[4]), 0);
+      const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
 
       result[`${days}days`] = {
         impressions: {
@@ -74,11 +78,11 @@ export function KpiCards({ data }: { data: any[] }) {
           change: 0,
           increasing: true,
         },
-      }
-    })
+      };
+    });
 
-    return result
-  }, [data])
+    return result;
+  }, [data]);
 
   return (
     <Card>
