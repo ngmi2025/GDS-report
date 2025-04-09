@@ -52,31 +52,46 @@ export function KpiCards({ data = [] }: { data: any[] }) {
       const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       const filtered = data.filter((row) => {
         if (!row) return false;
-        const dateStr = row[8] || row[9]; // Published or Updated Date
+        const dateStr = row["Published Date"] || row["Updated Date"];
         if (!dateStr) return false;
         const date = new Date(dateStr);
         return date >= from && date <= now;
       });
 
-      const clicks = filtered.reduce((sum, row) => sum + parseNumber(row?.[3]), 0);
-      const impressions = filtered.reduce((sum, row) => sum + parseNumber(row?.[4]), 0);
+      // Calculate current period metrics
+      const clicks = filtered.reduce((sum, row) => sum + parseNumber(row?.["Clicks"]), 0);
+      const impressions = filtered.reduce((sum, row) => sum + parseNumber(row?.["Impressions"]), 0);
       const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+
+      // Calculate previous period for comparison
+      const previousFrom = new Date(from.getTime() - days * 24 * 60 * 60 * 1000);
+      const previousFiltered = data.filter((row) => {
+        if (!row) return false;
+        const dateStr = row["Published Date"] || row["Updated Date"];
+        if (!dateStr) return false;
+        const date = new Date(dateStr);
+        return date >= previousFrom && date < from;
+      });
+
+      const previousClicks = previousFiltered.reduce((sum, row) => sum + parseNumber(row?.["Clicks"]), 0);
+      const previousImpressions = previousFiltered.reduce((sum, row) => sum + parseNumber(row?.["Impressions"]), 0);
+      const previousCtr = previousImpressions > 0 ? (previousClicks / previousImpressions) * 100 : 0;
 
       result[`${days}days`] = {
         impressions: {
           value: impressions,
-          change: 0,
-          increasing: true,
+          change: calculatePercentageChange(impressions, previousImpressions),
+          increasing: impressions > previousImpressions,
         },
         clicks: {
           value: clicks,
-          change: 0,
-          increasing: true,
+          change: calculatePercentageChange(clicks, previousClicks),
+          increasing: clicks > previousClicks,
         },
         ctr: {
           value: ctr,
-          change: 0,
-          increasing: true,
+          change: calculatePercentageChange(ctr, previousCtr),
+          increasing: ctr > previousCtr,
         },
       };
     });
