@@ -10,10 +10,12 @@ export const metadata: Metadata = {
   description: "Track and analyze your Google Discover performance metrics",
   icons: {
     icon: [
-      {
-        url: "/favicon.ico",
-        href: "/favicon.ico",
-      },
+      { url: "/icon.png", type: "image/png", sizes: "32x32" },
+      { url: "/icon.svg", type: "image/svg+xml" }
+    ],
+    shortcut: ["/icon.png"],
+    apple: [
+      { url: "/icon.png", type: "image/png", sizes: "180x180" }
     ],
   },
 }
