@@ -1,84 +1,139 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowDown, ArrowUp, MousePointerClick, Eye, BarChart, ArrowUpDown, Minus } from "lucide-react"
-import { formatNumber } from "@/lib/utils"
+import { useEffect, useState } from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { ArrowDownIcon, ArrowUpIcon, BarChart2Icon, EyeIcon, MousePointerClickIcon, TrendingUpIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-function calculatePercentageChange(current: number, previous: number): number {
-  if (previous === 0) return 0
-  return ((current - previous) / previous) * 100
+interface KpiMetric {
+  value: number
+  change: number
 }
 
-function PercentageChange({ value }: { value: number }) {
-  if (value === 0) {
+interface KpiData {
+  clicks: KpiMetric
+  impressions: KpiMetric
+  ctr: KpiMetric
+  position: KpiMetric
+}
+
+export function KpiCards() {
+  const [data, setData] = useState<KpiData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const response = await fetch('/api/searchconsole/overview')
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(errorText || 'Failed to fetch KPI data')
+        }
+        const data = await response.json()
+        setData(data)
+        setError(null)
+      } catch (err) {
+        console.error('KPI fetch error:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load KPI data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  if (loading) {
     return (
-      <div className="flex items-center text-muted-foreground">
-        <Minus className="h-4 w-4" />
-        <span>0%</span>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between space-x-2">
+                <div className="h-5 bg-gray-200 rounded w-24"></div>
+                <div className="h-4 bg-gray-200 rounded w-12"></div>
+              </div>
+              <div className="mt-2 h-8 bg-gray-200 rounded w-full"></div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     )
   }
 
-  const isPositive = value > 0
-  const Icon = isPositive ? ArrowUp : ArrowDown
-  const colorClass = isPositive ? "text-green-500" : "text-red-500"
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+        Error: {error}
+      </div>
+    )
+  }
 
-  return (
-    <div className={`flex items-center ${colorClass}`}>
-      <Icon className="h-4 w-4" />
-      <span>{Math.abs(value).toFixed(1)}%</span>
-    </div>
-  )
-}
+  if (!data) return null
 
-export function KpiCards() {
-  // Dummy data for demonstration
   const metrics = [
     {
       title: "Clicks",
-      icon: MousePointerClick,
-      value: 42156,
-      change: 5.7,
-      format: formatNumber
+      value: data.clicks.value.toLocaleString(),
+      change: data.clicks.change,
+      icon: MousePointerClickIcon,
     },
     {
       title: "Impressions",
-      icon: Eye,
-      value: 856234,
-      change: 6.8,
-      format: formatNumber
+      value: data.impressions.value.toLocaleString(),
+      change: data.impressions.change,
+      icon: EyeIcon,
     },
     {
       title: "CTR",
-      icon: BarChart,
-      value: 4.92,
-      change: -0.8,
-      format: (value: number) => `${value.toFixed(2)}%`
+      value: data.ctr.value.toFixed(2) + "%",
+      change: data.ctr.change,
+      icon: BarChart2Icon,
     },
     {
       title: "Avg. Position",
-      icon: ArrowUpDown,
-      value: 3.2,
-      change: 5.9, // Note: For position, negative change is good (moving up in rankings)
-      format: (value: number) => value.toFixed(1)
-    }
-  ];
+      value: data.position.value.toFixed(1),
+      change: data.position.change,
+      icon: TrendingUpIcon,
+    },
+  ]
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {metrics.map((metric) => (
         <Card key={metric.title}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              <div className="flex items-center gap-2">
-                <metric.icon className="h-4 w-4" />
-                {metric.title}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between space-x-2">
+              <div className="flex items-center space-x-2">
+                <metric.icon className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  {metric.title}
+                </h3>
               </div>
-            </CardTitle>
-            <PercentageChange value={metric.change} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metric.format(metric.value)}</div>
+              <span
+                className={cn(
+                  "flex items-center text-xs",
+                  metric.change > 0
+                    ? "text-green-600"
+                    : metric.change < 0
+                    ? "text-red-600"
+                    : "text-gray-600"
+                )}
+              >
+                {metric.change !== 0 && (
+                  <>
+                    {metric.change > 0 ? (
+                      <ArrowUpIcon className="h-4 w-4" />
+                    ) : (
+                      <ArrowDownIcon className="h-4 w-4" />
+                    )}
+                    {Math.abs(metric.change).toFixed(1)}%
+                  </>
+                )}
+              </span>
+            </div>
+            <div className="mt-2 text-2xl font-bold">{metric.value}</div>
           </CardContent>
         </Card>
       ))}
