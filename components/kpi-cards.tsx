@@ -1,166 +1,98 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowDown, ArrowUp, MousePointerClick, Eye, BarChart } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { formatNumber } from "@/lib/utils"
+import { ArrowDown, ArrowUp, Minus } from "lucide-react"
 
-export function KpiCards() {
-  // This would be fetched from your API
-  const kpiData = {
-    "7days": {
-      impressions: {
-        value: 198_900,
-        change: 8.9,
-        increasing: true,
-      },
-      clicks: {
-        value: 2_200_000,
-        change: 9.1,
-        increasing: true,
-      },
-      ctr: {
-        value: 8.9,
-        change: 0.2,
-        increasing: true,
-      },
-    },
-    "28days": {
-      impressions: {
-        value: 660_900,
-        change: 7.4,
-        increasing: true,
-      },
-      clicks: {
-        value: 8_900_000,
-        change: 8.2,
-        increasing: true,
-      },
-      ctr: {
-        value: 7.4,
-        change: -0.3,
-        increasing: false,
-      },
-    },
-    "90days": {
-      impressions: {
-        value: 1_400_000,
-        change: 6.8,
-        increasing: true,
-      },
-      clicks: {
-        value: 20_500_000,
-        change: 7.5,
-        increasing: true,
-      },
-      ctr: {
-        value: 6.8,
-        change: 0.1,
-        increasing: true,
-      },
-    },
-    "180days": {
-      impressions: {
-        value: 2_100_000,
-        change: 6.8,
-        increasing: true,
-      },
-      clicks: {
-        value: 30_800_000,
-        change: 7.2,
-        increasing: true,
-      },
-      ctr: {
-        value: 6.8,
-        change: -0.1,
-        increasing: false,
-      },
-    },
+interface KpiCardsProps {
+  sheetName: string;
+}
+
+function calculatePercentageChange(current: number, previous: number): number {
+  if (previous === 0) return 0
+  return ((current - previous) / previous) * 100
+}
+
+function PercentageChange({ value }: { value: number }) {
+  if (value === 0) {
+    return (
+      <div className="flex items-center text-muted-foreground">
+        <Minus className="h-4 w-4" />
+        <span>0%</span>
+      </div>
+    )
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Performance Summary</CardTitle>
-        <CardDescription>Key metrics across different time periods</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="7days">
-          <TabsList className="grid grid-cols-4 mb-4">
-            <TabsTrigger value="7days">Last 7 days</TabsTrigger>
-            <TabsTrigger value="28days">Last 28 days</TabsTrigger>
-            <TabsTrigger value="90days">Last 90 days</TabsTrigger>
-            <TabsTrigger value="180days">Last 180 days</TabsTrigger>
-          </TabsList>
+  const isPositive = value > 0
+  const Icon = isPositive ? ArrowUp : ArrowDown
+  const colorClass = isPositive ? "text-green-500" : "text-red-500"
 
-          {Object.entries(kpiData).map(([period, data]) => (
-            <TabsContent key={period} value={period}>
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card className="border-0 shadow-none">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Impressions</CardTitle>
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{data.impressions.value.toLocaleString()}</div>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      {data.impressions.increasing ? (
-                        <ArrowUp className="mr-1 h-4 w-4 text-green-500" />
-                      ) : (
-                        <ArrowDown className="mr-1 h-4 w-4 text-red-500" />
-                      )}
-                      <span className={data.impressions.increasing ? "text-green-500" : "text-red-500"}>
-                        {data.impressions.change}%
-                      </span>
-                      <span className="ml-1">vs previous period</span>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-none">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Clicks</CardTitle>
-                    <MousePointerClick className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{data.clicks.value.toLocaleString()}</div>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      {data.clicks.increasing ? (
-                        <ArrowUp className="mr-1 h-4 w-4 text-green-500" />
-                      ) : (
-                        <ArrowDown className="mr-1 h-4 w-4 text-red-500" />
-                      )}
-                      <span className={data.clicks.increasing ? "text-green-500" : "text-red-500"}>
-                        {data.clicks.change}%
-                      </span>
-                      <span className="ml-1">vs previous period</span>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-none">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">CTR</CardTitle>
-                    <BarChart className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{data.ctr.value.toFixed(1)}%</div>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      {data.ctr.increasing ? (
-                        <ArrowUp className="mr-1 h-4 w-4 text-green-500" />
-                      ) : (
-                        <ArrowDown className="mr-1 h-4 w-4 text-red-500" />
-                      )}
-                      <span className={data.ctr.increasing ? "text-green-500" : "text-red-500"}>
-                        {data.ctr.change}%
-                      </span>
-                      <span className="ml-1">vs previous period</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
-      </CardContent>
-    </Card>
+  return (
+    <div className={`flex items-center ${colorClass}`}>
+      <Icon className="h-4 w-4" />
+      <span>{Math.abs(value).toFixed(1)}%</span>
+    </div>
+  )
+}
+
+export function KpiCards({ sheetName }: KpiCardsProps) {
+  // Dummy data - will be replaced with GSC data later
+  const kpiData = {
+    current: {
+      clicks: 42156,
+      impressions: 856234,
+      ctr: 4.92,
+      position: 3.2
+    },
+    previous: {
+      clicks: 39876,
+      impressions: 802345,
+      ctr: 4.97,
+      position: 3.4
+    }
+  }
+
+  const metrics = [
+    {
+      title: "Clicks",
+      value: kpiData.current.clicks,
+      change: calculatePercentageChange(kpiData.current.clicks, kpiData.previous.clicks),
+      format: formatNumber
+    },
+    {
+      title: "Impressions",
+      value: kpiData.current.impressions,
+      change: calculatePercentageChange(kpiData.current.impressions, kpiData.previous.impressions),
+      format: formatNumber
+    },
+    {
+      title: "CTR",
+      value: kpiData.current.ctr,
+      change: calculatePercentageChange(kpiData.current.ctr, kpiData.previous.ctr),
+      format: (value: number) => `${value.toFixed(2)}%`
+    },
+    {
+      title: "Avg. Position",
+      value: kpiData.current.position,
+      change: calculatePercentageChange(kpiData.previous.position, kpiData.current.position), // Inverted because lower position is better
+      format: (value: number) => value.toFixed(1)
+    }
+  ]
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {metrics.map((metric) => (
+        <Card key={metric.title}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{metric.title}</CardTitle>
+            <PercentageChange value={metric.change} />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metric.format(metric.value)}</div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   )
 }
 

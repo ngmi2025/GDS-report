@@ -1,44 +1,117 @@
 "use client"
 
+import React from "react"
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import type { DateRange } from "react-day-picker"
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer } from "recharts"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { Toggle } from "@/components/ui/toggle"
-import { Eye, MousePointerClick, BarChart2, Target } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
-interface TrendsChartProps {
-  dateRange: DateRange
-  selectedMonth: string
+interface ChartData {
+  date: string
+  impressions: number
+  clicks: number
+  ctr: number
+  position: number
 }
 
-export function TrendsChart({ dateRange, selectedMonth }: TrendsChartProps) {
+interface TrendsChartProps {
+  dateRange: {
+    from: Date
+    to: Date
+  }
+}
+
+export function TrendsChart({ dateRange }: TrendsChartProps) {
   const [visibleMetrics, setVisibleMetrics] = useState({
-    impressions: true,
     clicks: true,
-    ctr: true,
-    position: true,
+    impressions: true,
+    ctr: false,
+    position: false,
   })
 
-  // This would be fetched from your API
-  const data = [
-    { date: "2025-03-01", impressions: 65000, clicks: 6500, ctr: 10.0, position: 3.2 },
-    { date: "2025-03-02", impressions: 68000, clicks: 7200, ctr: 10.6, position: 3.1 },
-    { date: "2025-03-03", impressions: 72000, clicks: 7500, ctr: 10.4, position: 3.0 },
-    { date: "2025-03-04", impressions: 75000, clicks: 7800, ctr: 10.4, position: 3.0 },
-    { date: "2025-03-05", impressions: 70000, clicks: 7000, ctr: 10.0, position: 3.1 },
-    { date: "2025-03-06", impressions: 68000, clicks: 6800, ctr: 10.0, position: 3.2 },
-    { date: "2025-03-07", impressions: 67000, clicks: 6700, ctr: 10.0, position: 3.2 },
-    { date: "2025-03-08", impressions: 69000, clicks: 7100, ctr: 10.3, position: 3.1 },
-    { date: "2025-03-09", impressions: 72000, clicks: 7500, ctr: 10.4, position: 3.0 },
-    { date: "2025-03-10", impressions: 75000, clicks: 7900, ctr: 10.5, position: 2.9 },
-    { date: "2025-03-11", impressions: 78000, clicks: 8200, ctr: 10.5, position: 2.9 },
-    { date: "2025-03-12", impressions: 80000, clicks: 8500, ctr: 10.6, position: 2.8 },
-    { date: "2025-03-13", impressions: 82000, clicks: 8700, ctr: 10.6, position: 2.8 },
-    { date: "2025-03-14", impressions: 85000, clicks: 9000, ctr: 10.6, position: 2.7 },
-    { date: "2025-03-15", impressions: 87000, clicks: 9300, ctr: 10.7, position: 2.7 },
-  ]
+  // Generate data points for the selected date range
+  const data: ChartData[] = React.useMemo(() => {
+    const days: ChartData[] = []
+    const currentDate = new Date(dateRange.from)
+    const endDate = new Date(dateRange.to)
+    
+    // Base values for the metrics
+    let baseClicks = 6500
+    let baseImpressions = 65000
+    let baseCtr = 10.0
+    let basePosition = 3.2
+    
+    // Random variation ranges
+    const clicksVariation = 500
+    const impressionsVariation = 5000
+    const ctrVariation = 0.5
+    const positionVariation = 0.3
+    
+    while (currentDate <= endDate) {
+      // Add some random variation to create realistic-looking trends
+      const randomFactor = Math.sin(days.length * 0.1) // Creates a wave pattern
+      const trendFactor = days.length * 0.02 // Creates an upward trend
+      
+      const clicks = Math.round(
+        baseClicks + 
+        (Math.random() - 0.5) * clicksVariation + 
+        randomFactor * clicksVariation + 
+        trendFactor * 100
+      )
+      
+      const impressions = Math.round(
+        baseImpressions + 
+        (Math.random() - 0.5) * impressionsVariation + 
+        randomFactor * impressionsVariation + 
+        trendFactor * 1000
+      )
+      
+      const ctr = Number(((clicks / impressions) * 100).toFixed(1))
+      
+      const position = Number((
+        basePosition + 
+        (Math.random() - 0.5) * positionVariation + 
+        randomFactor * 0.2 - 
+        trendFactor * 0.05
+      ).toFixed(1))
+      
+      days.push({
+        date: currentDate.toISOString().split('T')[0],
+        clicks,
+        impressions,
+        ctr,
+        position
+      })
+      
+      // Update base values slightly to create trends
+      baseClicks += Math.random() * 50
+      baseImpressions += Math.random() * 500
+      baseCtr = (baseClicks / baseImpressions) * 100
+      basePosition = Math.max(1, Math.min(5, basePosition + (Math.random() - 0.5) * 0.1))
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+
+    // Apply smoothing using moving average
+    const windowSize = Math.max(7, Math.floor(days.length / 50)) // Adaptive window size
+    const smoothData = days.map((day, index) => {
+      const window = days.slice(
+        Math.max(0, index - windowSize),
+        Math.min(days.length, index + windowSize + 1)
+      )
+      
+      return {
+        date: day.date,
+        clicks: Math.round(window.reduce((sum, d) => sum + d.clicks, 0) / window.length),
+        impressions: Math.round(window.reduce((sum, d) => sum + d.impressions, 0) / window.length),
+        ctr: Number((window.reduce((sum, d) => sum + d.ctr, 0) / window.length).toFixed(1)),
+        position: Number((window.reduce((sum, d) => sum + d.position, 0) / window.length).toFixed(1))
+      }
+    })
+    
+    return smoothData
+  }, [dateRange.from, dateRange.to])
 
   const toggleMetric = (metric: keyof typeof visibleMetrics) => {
     setVisibleMetrics((prev) => ({
@@ -47,145 +120,238 @@ export function TrendsChart({ dateRange, selectedMonth }: TrendsChartProps) {
     }))
   }
 
+  // Calculate min/max values for scaling CTR and Position
+  const yMax = Math.max(...data.map(d => d.clicks))
+  const y2Max = Math.max(...data.map(d => d.impressions))
+  
+  // Improved scaling factors for better visualization
+  const ctrScale = yMax / (Math.max(...data.map(d => d.ctr)) * 1.2) // Add some padding
+  
+  // Invert position scaling so higher numbers appear lower on the graph
+  const maxPosition = Math.max(...data.map(d => d.position))
+  const minPosition = Math.min(...data.map(d => d.position))
+  const positionRange = maxPosition - minPosition
+  const positionScale = yMax / (positionRange * 1.5) // More padding for position
+
+  // Scale CTR and Position values to match the clicks scale
+  const scaledData = data.map(d => ({
+    ...d,
+    scaledCtr: d.ctr * ctrScale,
+    // Invert position so higher numbers appear lower on the graph
+    scaledPosition: yMax - ((d.position - minPosition) * positionScale)
+  }))
+
   return (
-    <Card className="w-full">
+    <Card className="bg-[#020817]">
       <CardHeader>
-        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+        <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Performance Trends</CardTitle>
-            <CardDescription>Daily metrics for the selected period</CardDescription>
+            <CardTitle className="text-white">Performance Trends</CardTitle>
+            <CardDescription>Track your content's performance over time</CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Toggle
-              pressed={visibleMetrics.impressions}
-              onPressedChange={() => toggleMetric("impressions")}
-              aria-label="Toggle impressions"
+            <Button
               size="sm"
+              variant={visibleMetrics.clicks ? "default" : "outline"}
+              onClick={() => toggleMetric("clicks")}
+              className={visibleMetrics.clicks ? "bg-[#4285f4] hover:bg-[#4285f4]/90" : ""}
             >
-              <Eye className="mr-1 h-4 w-4" />
-              Impressions
-            </Toggle>
-            <Toggle
-              pressed={visibleMetrics.clicks}
-              onPressedChange={() => toggleMetric("clicks")}
-              aria-label="Toggle clicks"
-              size="sm"
-            >
-              <MousePointerClick className="mr-1 h-4 w-4" />
               Clicks
-            </Toggle>
-            <Toggle
-              pressed={visibleMetrics.ctr}
-              onPressedChange={() => toggleMetric("ctr")}
-              aria-label="Toggle CTR"
+            </Button>
+            <Button
               size="sm"
+              variant={visibleMetrics.impressions ? "default" : "outline"}
+              onClick={() => toggleMetric("impressions")}
+              className={visibleMetrics.impressions ? "bg-[#673ab7] hover:bg-[#673ab7]/90" : ""}
             >
-              <BarChart2 className="mr-1 h-4 w-4" />
+              Impressions
+            </Button>
+            <Button
+              size="sm"
+              variant={visibleMetrics.ctr ? "default" : "outline"}
+              onClick={() => toggleMetric("ctr")}
+              className={visibleMetrics.ctr ? "bg-[#0f9d58] hover:bg-[#0f9d58]/90" : ""}
+            >
               CTR
-            </Toggle>
-            <Toggle
-              pressed={visibleMetrics.position}
-              onPressedChange={() => toggleMetric("position")}
-              aria-label="Toggle position"
+            </Button>
+            <Button
               size="sm"
+              variant={visibleMetrics.position ? "default" : "outline"}
+              onClick={() => toggleMetric("position")}
+              className={visibleMetrics.position ? "bg-[#ff7043] hover:bg-[#ff7043]/90" : ""}
             >
-              <Target className="mr-1 h-4 w-4" />
               Position
-            </Toggle>
+            </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer
-          config={{
-            impressions: {
-              label: "Impressions",
-              color: "hsl(var(--chart-1))",
-            },
-            clicks: {
-              label: "Clicks",
-              color: "hsl(var(--chart-2))",
-            },
-            ctr: {
-              label: "CTR (%)",
-              color: "hsl(var(--chart-3))",
-            },
-            position: {
-              label: "Position",
-              color: "hsl(var(--chart-4))",
-            },
-          }}
-          className="h-[400px]"
-        >
+        <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(value) => {
-                  const date = new Date(value)
-                  return `${date.getMonth() + 1}/${date.getDate()}`
+            <LineChart
+              data={scaledData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+            >
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                vertical={false}
+                stroke="rgba(255,255,255,0.1)"
+              />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={(date) => {
+                  const d = new Date(date)
+                  return d.toLocaleDateString('en-GB', { 
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: '2-digit'
+                  }).replace(/\//g, '/');
+                }}
+                stroke="#666"
+                tick={{ fill: '#888', fontSize: 12 }}
+              />
+              {visibleMetrics.clicks && (
+                <YAxis
+                  yAxisId="left"
+                  orientation="left"
+                  stroke="#4285f4"
+                  tickFormatter={(value) => value.toLocaleString()}
+                  tick={{ fill: '#888', fontSize: 12 }}
+                  tickCount={8}
+                />
+              )}
+              {visibleMetrics.impressions && (
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="#673ab7"
+                  tickFormatter={(value) => value.toLocaleString()}
+                  tick={{ fill: '#888', fontSize: 12 }}
+                  tickCount={8}
+                />
+              )}
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'rgba(2, 8, 23, 0.95)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '6px',
+                }}
+                labelStyle={{ color: '#fff' }}
+                itemStyle={{ color: '#fff' }}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const date = new Date(label)
+                    const day = date.getDate()
+                    const ordinal = (day: number) => {
+                      if (day > 3 && day < 21) return 'th'
+                      switch (day % 10) {
+                        case 1: return 'st'
+                        case 2: return 'nd'
+                        case 3: return 'rd'
+                        default: return 'th'
+                      }
+                    }
+                    const formattedDate = date.toLocaleDateString('en-GB', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    })
+                    // Replace the numeric day with day + ordinal
+                    const finalDate = formattedDate.replace(
+                      /\d+/,
+                      `${day}${ordinal(day)}`
+                    )
+
+                    return (
+                      <div className="rounded-lg border border-border/50 bg-[#020817] p-3 shadow-md">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="font-medium text-white">Date:</div>
+                          <div className="text-white">{finalDate}</div>
+                          {payload.map((entry: any) => {
+                            let value = entry.value
+                            let name = entry.name
+                            let color = entry.color
+                            
+                            // Convert scaled values back to original
+                            if (name === "scaledCtr") {
+                              value = value / ctrScale
+                              name = "CTR"
+                            } else if (name === "scaledPosition") {
+                              // Convert back from inverted scale
+                              value = minPosition + ((yMax - value) / positionScale)
+                              name = "Position"
+                            }
+                            
+                            return (
+                              <React.Fragment key={name}>
+                                <div className="font-medium" style={{ color }}>
+                                  {name}:
+                                </div>
+                                <div className="text-white">
+                                  {name === "CTR" 
+                                    ? `${value.toFixed(1)}%`
+                                    : name === "Position"
+                                      ? value.toFixed(1)
+                                      : value.toLocaleString()}
+                                </div>
+                              </React.Fragment>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  }
+                  return null
                 }}
               />
-              <YAxis yAxisId="left" orientation="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Legend />
-
-              {visibleMetrics.impressions && (
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="impressions"
-                  stroke="var(--color-impressions)"
-                  name="Impressions"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 6 }}
-                />
-              )}
-
               {visibleMetrics.clicks && (
                 <Line
-                  yAxisId="left"
                   type="monotone"
                   dataKey="clicks"
-                  stroke="var(--color-clicks)"
-                  name="Clicks"
-                  strokeWidth={2}
+                  stroke="#4285f4"
+                  yAxisId="left"
                   dot={false}
-                  activeDot={{ r: 6 }}
+                  strokeWidth={1.5}
+                  activeDot={{ r: 4, fill: "#4285f4" }}
                 />
               )}
-
+              {visibleMetrics.impressions && (
+                <Line
+                  type="monotone"
+                  dataKey="impressions"
+                  stroke="#673ab7"
+                  yAxisId="right"
+                  dot={false}
+                  strokeWidth={1.5}
+                  activeDot={{ r: 4, fill: "#673ab7" }}
+                />
+              )}
               {visibleMetrics.ctr && (
                 <Line
-                  yAxisId="right"
                   type="monotone"
-                  dataKey="ctr"
-                  stroke="var(--color-ctr)"
-                  name="CTR (%)"
-                  strokeWidth={2}
+                  dataKey="scaledCtr"
+                  stroke="#0f9d58"
+                  yAxisId="left"
                   dot={false}
-                  activeDot={{ r: 6 }}
+                  strokeWidth={1.5}
+                  activeDot={{ r: 4, fill: "#0f9d58" }}
                 />
               )}
-
               {visibleMetrics.position && (
                 <Line
-                  yAxisId="right"
                   type="monotone"
-                  dataKey="position"
-                  stroke="var(--color-position)"
-                  name="Position"
-                  strokeWidth={2}
+                  dataKey="scaledPosition"
+                  stroke="#ff7043"
+                  yAxisId="left"
                   dot={false}
-                  activeDot={{ r: 6 }}
+                  strokeWidth={1.5}
+                  activeDot={{ r: 4, fill: "#ff7043" }}
                 />
               )}
             </LineChart>
           </ResponsiveContainer>
-        </ChartContainer>
+        </div>
       </CardContent>
     </Card>
   )

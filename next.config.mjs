@@ -27,6 +27,15 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
+  reactStrictMode: true,
+  webpack: (config) => {
+    // Disable the deprecated punycode module
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      punycode: false,
+    };
+    return config;
+  },
 }
 
 if (userConfig) {
