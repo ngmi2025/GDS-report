@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 import { useEffect } from "react"
+import { signOut, useSession } from "next-auth/react"
+import Link from "next/link"
 
 const sampleNotifications = [
   {
@@ -84,6 +86,8 @@ export function RootLayoutClient({
 }: {
   children: React.ReactNode
 }) {
+  const { data: session } = useSession()
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     toast.success("Link copied to clipboard");
@@ -115,44 +119,24 @@ export function RootLayoutClient({
       <div className="flex min-h-screen">
         <Sidebar />
         <div className="flex-1 flex flex-col">
-          <div className="flex items-center justify-between px-16 py-4 border-b">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-bold">
-                <span className="text-primary">UPGRADED</span>
-                <span className="text-orange-500">POINTS</span>
-              </h1>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                size="icon"
-                onClick={() => {
-                  window.location.reload();
-                }}
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <Share2 className="h-4 w-4" />
+          <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-14 items-center justify-between">
+              <Link href="/" className="flex items-center space-x-2">
+                <span className="font-bold">Google Discover Dashboard</span>
+              </Link>
+              <div className="flex items-center space-x-4">
+                <NotificationCenter />
+                {session ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => signOut({ callbackUrl: '/login' })}
+                  >
+                    Sign Out
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleCopyLink}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy link
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleEmailShare}>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Share via email
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <NotificationCenter />
-              <ThemeToggle />
+                ) : null}
+              </div>
             </div>
-          </div>
+          </header>
           <main className="flex-1 px-8 py-6">
             {children}
           </main>
