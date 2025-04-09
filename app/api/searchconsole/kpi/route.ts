@@ -2,12 +2,19 @@ import { google } from "googleapis"
 import { NextRequest } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../auth/[...nextauth]/route"
+import { Session } from "next-auth"
+
+// Extend the Session type to include accessToken
+interface ExtendedSession extends Session {
+  accessToken?: string
+}
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(authOptions) as ExtendedSession
 
-  if (!session || !session.accessToken) {
-    return new Response("Unauthorized", { status: 401 })
+  if (!session?.accessToken) {
+    console.error("No access token found in session")
+    return new Response("Unauthorized - No access token", { status: 401 })
   }
 
   const auth = new google.auth.OAuth2()
@@ -16,7 +23,7 @@ export async function GET(req: NextRequest) {
   const searchconsole = google.searchconsole({ version: "v1", auth })
   
   // Get the site URL from environment variable or fallback
-  const siteUrl = process.env.GOOGLE_SEARCH_CONSOLE_SITE_URL || "https://upgradedpoints.com"
+  const siteUrl = process.env.GOOGLE_SEARCH_CONSOLE_SITE_URL || "sc-domain:upgradedpoints.com"
   
   // Calculate date ranges
   const now = new Date()
@@ -31,8 +38,9 @@ export async function GET(req: NextRequest) {
       requestBody: {
         startDate,
         endDate,
-        type: 'discover',  // Specifically for Google Discover data
-        dimensions: [],    // No dimensions for total aggregation
+        type: 'discover',
+        dimensions: [],
+        dataState: 'all'  // Include fresh data
       },
     })
 
@@ -44,6 +52,7 @@ export async function GET(req: NextRequest) {
         endDate: startDate,
         type: 'discover',
         dimensions: [],
+        dataState: 'all'  // Include fresh data
       },
     })
 
@@ -65,18 +74,18 @@ export async function GET(req: NextRequest) {
         change: calculateChange(current.impressions || 0, previous.impressions || 0)
       },
       ctr: {
-        value: (current.ctr || 0) * 100, // Convert to percentage
+        value: (current.ctr || 0) * 100,
         change: calculateChange((current.ctr || 0) * 100, (previous.ctr || 0) * 100)
       },
       position: {
         value: current.position || 0,
-        change: calculateChange(previous.position || 0, current.position || 0) * -1 // Invert since lower is better
+        change: calculateChange(previous.position || 0, current.position || 0) * -1
       }
     }
 
     return Response.json(metrics)
   } catch (error) {
     console.error("GSC KPI error:", error)
-    return new Response("Error fetching Search Console KPI data", { status: 500 })
+    return new Response("Error fetching Search Console KPI data: " + (error as Error).message, { status: 500 })
   }
 } 

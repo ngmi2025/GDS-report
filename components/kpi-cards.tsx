@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowDownIcon, ArrowUpIcon, BarChart2Icon, EyeIcon, MousePointerClickIcon, TrendingUpIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useSession } from "next-auth/react"
 
 interface KpiMetric {
   value: number
@@ -18,18 +19,31 @@ interface KpiData {
 }
 
 export function KpiCards() {
+  const { data: session, status } = useSession()
   const [data, setData] = useState<KpiData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
+      if (status === "loading") return
+      if (!session) {
+        setError("Please sign in to view KPI data")
+        setLoading(false)
+        return
+      }
+
       try {
         const response = await fetch('/api/searchconsole/kpi')
-        if (!response.ok) throw new Error('Failed to fetch KPI data')
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(errorText || 'Failed to fetch KPI data')
+        }
         const data = await response.json()
         setData(data)
+        setError(null)
       } catch (err) {
+        console.error('KPI fetch error:', err)
         setError(err instanceof Error ? err.message : 'Failed to load KPI data')
       } finally {
         setLoading(false)
@@ -37,20 +51,29 @@ export function KpiCards() {
     }
 
     fetchData()
-  }, [])
+  }, [session, status])
 
-  if (loading) return <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-    {[...Array(4)].map((_, i) => (
-      <Card key={i} className="animate-pulse">
-        <CardContent className="p-6">
-          <div className="h-10 bg-gray-200 rounded w-20 mb-4"></div>
-          <div className="h-8 bg-gray-200 rounded w-full"></div>
-        </CardContent>
-      </Card>
-    ))}
-  </div>
+  if (loading) return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {[...Array(4)].map((_, i) => (
+        <Card key={i} className="animate-pulse">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between space-x-2">
+              <div className="h-5 bg-gray-200 rounded w-24"></div>
+              <div className="h-4 bg-gray-200 rounded w-12"></div>
+            </div>
+            <div className="mt-2 h-8 bg-gray-200 rounded w-full"></div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
 
-  if (error) return <div className="text-red-500">Error: {error}</div>
+  if (error) return (
+    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+      Error: {error}
+    </div>
+  )
 
   if (!data) return null
 
