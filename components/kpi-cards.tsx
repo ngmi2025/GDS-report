@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowDownIcon, ArrowUpIcon, BarChart2Icon, EyeIcon, MousePointerClickIcon, TrendingUpIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useSession } from "next-auth/react"
 
 interface KpiMetric {
   value: number
@@ -18,6 +19,7 @@ interface KpiData {
 }
 
 export function KpiCards() {
+  const { data: session, status } = useSession()
   const [data, setData] = useState<KpiData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -25,12 +27,29 @@ export function KpiCards() {
   useEffect(() => {
     async function fetchData() {
       try {
+        // Check if we're still loading the session
+        if (status === 'loading') {
+          return
+        }
+
+        // Check if we're authenticated
+        if (!session) {
+          setError('Please sign in to view KPI data')
+          setLoading(false)
+          return
+        }
+
+        console.log('Fetching KPI data...')
         const response = await fetch('/api/searchconsole/overview')
+        
         if (!response.ok) {
           const errorText = await response.text()
-          throw new Error(errorText || 'Failed to fetch KPI data')
+          console.error('KPI fetch response error:', response.status, errorText)
+          throw new Error(errorText || `HTTP error! status: ${response.status}`)
         }
+        
         const data = await response.json()
+        console.log('KPI data received:', data)
         setData(data)
         setError(null)
       } catch (err) {
@@ -42,9 +61,9 @@ export function KpiCards() {
     }
 
     fetchData()
-  }, [])
+  }, [session, status])
 
-  if (loading) {
+  if (status === 'loading' || loading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
@@ -64,8 +83,12 @@ export function KpiCards() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-        Error: {error}
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="text-sm text-red-600 font-medium">Error loading KPI data:</div>
+        <div className="mt-1 text-sm text-red-500">{error}</div>
+        <div className="mt-2 text-xs text-red-400">
+          Authentication status: {status}
+        </div>
       </div>
     )
   }

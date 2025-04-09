@@ -5,10 +5,15 @@ import { authOptions } from "../../auth/[...nextauth]/route"
 
 export async function GET(req: NextRequest) {
   try {
+    console.log('Fetching Search Console data...')
     const session = await getServerSession(authOptions)
     
     if (!session?.accessToken) {
-      return new Response("Unauthorized", { status: 401 })
+      console.error('No access token found in session:', session)
+      return new Response(
+        JSON.stringify({ error: "No access token found. Please sign in again." }),
+        { status: 401 }
+      )
     }
 
     const auth = new google.auth.OAuth2()
@@ -18,6 +23,15 @@ export async function GET(req: NextRequest) {
     
     // Get site URL from environment variable
     const siteUrl = process.env.GOOGLE_SEARCH_CONSOLE_SITE_URL
+    if (!siteUrl) {
+      console.error('No site URL configured')
+      return new Response(
+        JSON.stringify({ error: "Search Console site URL not configured" }),
+        { status: 500 }
+      )
+    }
+
+    console.log('Using site URL:', siteUrl)
 
     // Calculate date ranges (last 30 days vs previous 30 days)
     const now = new Date()
@@ -25,7 +39,10 @@ export async function GET(req: NextRequest) {
     const startDate = new Date(now.setDate(now.getDate() - 30)).toISOString().split('T')[0]
     const previousStartDate = new Date(now.setDate(now.getDate() - 30)).toISOString().split('T')[0]
 
+    console.log('Date ranges:', { startDate, endDate, previousStartDate })
+
     // Fetch current period data
+    console.log('Fetching current period data...')
     const currentPeriod = await searchconsole.searchanalytics.query({
       siteUrl,
       requestBody: {
@@ -38,6 +55,7 @@ export async function GET(req: NextRequest) {
     })
 
     // Fetch previous period data
+    console.log('Fetching previous period data...')
     const previousPeriod = await searchconsole.searchanalytics.query({
       siteUrl,
       requestBody: {
@@ -47,6 +65,11 @@ export async function GET(req: NextRequest) {
         searchType: "discover",
         dataState: "all"
       },
+    })
+
+    console.log('Data received:', {
+      current: currentPeriod.data.rows?.[0],
+      previous: previousPeriod.data.rows?.[0]
     })
 
     // Extract metrics
@@ -69,22 +92,30 @@ export async function GET(req: NextRequest) {
         change: calculateChange(current.impressions || 0, previous.impressions || 0)
       },
       ctr: {
-        value: (current.ctr || 0) * 100, // Convert to percentage
+        value: (current.ctr || 0) * 100,
         change: calculateChange((current.ctr || 0) * 100, (previous.ctr || 0) * 100)
       },
       position: {
         value: current.position || 0,
-        // For position, a decrease is actually better
         change: calculateChange(previous.position || 0, current.position || 0) * -1
       }
     }
 
+    console.log('Returning metrics:', metrics)
     return Response.json(metrics)
   } catch (error) {
-    console.error("Error fetching Search Console overview:", error)
+    console.error("Error fetching Search Console data:", error)
     return new Response(
-      JSON.stringify({ error: "Failed to fetch Search Console data" }),
-      { status: 500 }
+      JSON.stringify({ 
+        error: "Failed to fetch Search Console data",
+        details: error instanceof Error ? error.message : String(error)
+      }),
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
     )
   }
 } 
