@@ -1,87 +1,89 @@
 "use client"
 
+import { MousePointerClick, Eye, Percent } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowDown, ArrowUp, MousePointerClick, Eye, BarChart, ArrowUpDown, Minus } from "lucide-react"
-import { formatNumber } from "@/lib/utils"
+import { useSearchConsoleData } from "@/lib/hooks/useSearchConsoleData"
+import { DateRange } from "react-day-picker"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-function calculatePercentageChange(current: number, previous: number): number {
-  if (previous === 0) return 0
-  return ((current - previous) / previous) * 100
+interface KpiCardsProps {
+  dateRange: DateRange | undefined
 }
 
-function PercentageChange({ value }: { value: number }) {
-  if (value === 0) {
-    return (
-      <div className="flex items-center text-muted-foreground">
-        <Minus className="h-4 w-4" />
-        <span>0%</span>
-      </div>
-    )
+export function KpiCards({ dateRange }: KpiCardsProps) {
+  if (!dateRange) {
+    return null
   }
 
-  const isPositive = value > 0
-  const Icon = isPositive ? ArrowUp : ArrowDown
-  const colorClass = isPositive ? "text-green-500" : "text-red-500"
+  const { data, loading, error } = useSearchConsoleData(dateRange)
 
-  return (
-    <div className={`flex items-center ${colorClass}`}>
-      <Icon className="h-4 w-4" />
-      <span>{Math.abs(value).toFixed(1)}%</span>
-    </div>
-  )
-}
+  if (error) {
+    return <div>Error loading data</div>
+  }
 
-export function KpiCards() {
-  // Dummy data for demonstration
+  if (loading) {
+    return <div>Loading...</div>
+  }
+
+  if (!data) {
+    return null
+  }
+
   const metrics = [
     {
       title: "Clicks",
+      value: data.current.clicks.toLocaleString(),
+      change: data.changes.clicks,
       icon: MousePointerClick,
-      value: 42156,
-      change: 5.7,
-      format: formatNumber
+      tooltip: "Total number of clicks from Google Discover"
     },
     {
       title: "Impressions",
+      value: data.current.impressions.toLocaleString(),
+      change: data.changes.impressions,
       icon: Eye,
-      value: 856234,
-      change: 6.8,
-      format: formatNumber
+      tooltip: "Total number of impressions from Google Discover"
     },
     {
       title: "CTR",
-      icon: BarChart,
-      value: 4.92,
-      change: -0.8,
-      format: (value: number) => `${value.toFixed(2)}%`
+      value: `${data.current.ctr.toFixed(2)}%`,
+      change: data.changes.ctr,
+      icon: Percent,
+      tooltip: "Click-through rate (clicks ÷ impressions)"
     },
-    {
-      title: "Avg. Position",
-      icon: ArrowUpDown,
-      value: 3.2,
-      change: 5.9, // Note: For position, negative change is good (moving up in rankings)
-      format: (value: number) => value.toFixed(1)
-    }
-  ];
+  ]
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {metrics.map((metric) => (
-        <Card key={metric.title}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              <div className="flex items-center gap-2">
-                <metric.icon className="h-4 w-4" />
-                {metric.title}
+    <div className="space-y-4">
+      {data.warnings && data.warnings.length > 0 && (
+        <div className="text-sm text-muted-foreground">
+          {data.warnings.map((warning, index) => (
+            <p key={index}>{warning}</p>
+          ))}
+        </div>
+      )}
+      <div className="grid gap-4 md:grid-cols-3">
+        {metrics.map((metric) => (
+          <Card key={metric.title} className="bg-[#020817]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="flex items-center space-x-2">
+                <metric.icon className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-white">
+                  {metric.title}
+                </CardTitle>
               </div>
-            </CardTitle>
-            <PercentageChange value={metric.change} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metric.format(metric.value)}</div>
-          </CardContent>
-        </Card>
-      ))}
+              {metric.change !== null && (
+                <div className={`text-sm ${metric.change > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {metric.change > 0 ? '↑' : '↓'} {Math.abs(metric.change).toFixed(1)}%
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">{metric.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   )
 }

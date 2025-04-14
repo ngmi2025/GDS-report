@@ -1,11 +1,12 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import { format, parse, setYear } from "date-fns"
+import { format, parse, setYear, startOfMonth, endOfMonth } from "date-fns"
 import { ContentPerformance } from "@/components/content-performance"
 import { AuthorPerformance } from "@/components/author-performance"
 import { KpiCards } from "@/components/kpi-cards"
 import { Footer } from "@/components/footer"
+import { DateRange } from "react-day-picker"
 
 export default function MonthPage() {
   const params = useParams()
@@ -15,28 +16,33 @@ export default function MonthPage() {
   const [monthStr, yearStr] = month.split('-')
   const fullYear = yearStr.length === 2 ? `20${yearStr}` : yearStr
   
-  // Parse the month string to get the full month name
-  let monthName: string
+  // Parse the month string to get the full month name and date
+  let monthDate: Date
   try {
     // Create a base date with the correct year
     let date = parse(monthStr, 'MMM', new Date())
     // Set the year explicitly
-    date = setYear(date, parseInt(fullYear))
-    monthName = format(date, 'MMMM') // Get full month name (e.g., "November")
+    monthDate = setYear(date, parseInt(fullYear))
     console.log('Date parsing:', {
       input: monthStr,
-      parsed: date.toISOString(),
-      monthName,
+      parsed: monthDate.toISOString(),
+      monthName: format(monthDate, 'MMMM'),
       year: fullYear
     })
   } catch (error) {
     console.error('Error parsing month:', error)
-    monthName = monthStr // Fallback to input month string
+    monthDate = new Date() // Fallback to current date
   }
   
   // Format sheet names to match Google Sheets tab names
-  const contentSheetName = `Google Discover ${monthName} ${fullYear}`
-  const authorSheetName = `Author Leaderboard ${monthName} ${fullYear}`
+  const contentSheetName = `Google Discover ${format(monthDate, 'MMMM')} ${fullYear}`
+  const authorSheetName = `Author Leaderboard ${format(monthDate, 'MMMM')} ${fullYear}`
+  
+  // Create date range for the month
+  const dateRange: DateRange = {
+    from: startOfMonth(monthDate),
+    to: endOfMonth(monthDate)
+  }
   
   // Log detailed information for debugging
   console.log('Month page params:', JSON.stringify({
@@ -44,7 +50,7 @@ export default function MonthPage() {
     month,
     monthStr,
     yearStr,
-    monthName,
+    monthName: format(monthDate, 'MMMM'),
     fullYear
   }, null, 2))
   
@@ -56,17 +62,19 @@ export default function MonthPage() {
   return (
     <div className="flex-1 space-y-4 p-8">
       <h1 className="text-2xl font-bold tracking-tight">
-        Google Discover Performance for {monthName} {fullYear}
+        Google Discover Performance for {format(monthDate, 'MMMM')} {fullYear}
       </h1>
 
       {/* KPI Cards */}
-      <KpiCards sheetName={contentSheetName} />
+      <KpiCards dateRange={dateRange} />
 
       {/* Content Performance Table */}
       <ContentPerformance sheetName={contentSheetName} />
 
       {/* Author Performance Table */}
       <AuthorPerformance sheetName={authorSheetName} />
+
+      <Footer />
     </div>
   )
 } 

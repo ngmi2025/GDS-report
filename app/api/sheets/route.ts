@@ -1,6 +1,19 @@
 import { NextRequest } from "next/server"
 
-const SHEETS_SCRIPT_URL = process.env.GOOGLE_SHEETS_SCRIPT_URL
+// Try both with and without NEXT_PUBLIC_ prefix
+const SHEETS_SCRIPT_URL = process.env.NEXT_PUBLIC_GOOGLE_SHEETS_SCRIPT_URL || process.env.GOOGLE_SHEETS_SCRIPT_URL
+
+// Debug logging
+console.log('Environment check:', {
+  SHEETS_SCRIPT_URL,
+  NEXT_PUBLIC_URL: process.env.NEXT_PUBLIC_GOOGLE_SHEETS_SCRIPT_URL,
+  REGULAR_URL: process.env.GOOGLE_SHEETS_SCRIPT_URL,
+  allEnv: process.env,
+  nodeEnv: process.env.NODE_ENV,
+  envKeys: Object.keys(process.env),
+  hasSheetsScriptUrl: !!process.env.GOOGLE_SHEETS_SCRIPT_URL,
+  sheetsScriptUrlLength: process.env.GOOGLE_SHEETS_SCRIPT_URL?.length
+})
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams
@@ -10,7 +23,12 @@ export async function GET(req: NextRequest) {
   console.log('API Request:', JSON.stringify({
     url: req.url,
     sheet,
-    allParams: Object.fromEntries(searchParams.entries())
+    allParams: Object.fromEntries(searchParams.entries()),
+    envCheck: {
+      SHEETS_SCRIPT_URL,
+      NEXT_PUBLIC_URL: process.env.NEXT_PUBLIC_GOOGLE_SHEETS_SCRIPT_URL,
+      REGULAR_URL: process.env.GOOGLE_SHEETS_SCRIPT_URL
+    }
   }, null, 2))
 
   if (!sheet) {
@@ -21,10 +39,18 @@ export async function GET(req: NextRequest) {
   }
 
   if (!SHEETS_SCRIPT_URL) {
-    console.error("Google Sheets Script URL not configured")
+    console.error("Google Sheets Script URL not configured", {
+      env: process.env,
+      keys: Object.keys(process.env)
+    })
     return Response.json({ 
       error: "Configuration error",
-      message: "Google Sheets Script URL not configured"
+      message: "Google Sheets Script URL not configured",
+      debug: {
+        envKeys: Object.keys(process.env),
+        hasSheetsScriptUrl: !!process.env.GOOGLE_SHEETS_SCRIPT_URL,
+        sheetsScriptUrlLength: process.env.GOOGLE_SHEETS_SCRIPT_URL?.length
+      }
     }, { status: 500 })
   }
 

@@ -15,15 +15,16 @@ import {
 import { DateRange } from "react-day-picker"
 
 interface UnifiedDateSelectorProps {
-  defaultValue?: DateRange
-  onDateChange?: (range: DateRange) => void
+  defaultValue?: DateRange & { preset?: string }
+  onDateChange?: (range: DateRange & { preset?: string }) => void
 }
 
 type ViewType = "presets" | "months" | "calendar"
+type SelectionMethod = "preset" | "month" | "calendar"
 
 const PRESET_RANGES = [
   { label: "Last 7 days", days: 7 },
-  { label: "Last 30 days", days: 30 },
+  { label: "Last 28 days", days: 28 },
   { label: "Last 3 months", days: 90 },
   { label: "Last 16 months", days: 485 }, // ~16 months (485 days)
 ]
@@ -31,23 +32,26 @@ const PRESET_RANGES = [
 export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateSelectorProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const [activeView, setActiveView] = React.useState<ViewType>("presets")
+  const [selectionMethod, setSelectionMethod] = React.useState<SelectionMethod>("calendar")
+  const [selectedPreset, setSelectedPreset] = React.useState<string>("")
   const [selectedRange, setSelectedRange] = React.useState<DateRange | undefined>(() => {
-    // Set default to last 16 months if no defaultValue provided
     if (!defaultValue) {
       const to = new Date()
-      const from = subMonths(to, 16)
+      const from = subMonths(to, 3)
       return { from, to }
     }
     return defaultValue
   })
   const [monthSearch, setMonthSearch] = React.useState("")
 
-  // Initialize with 16-month range if no defaultValue
+  // Initialize with 3-month range if no defaultValue
   React.useEffect(() => {
     if (!defaultValue && onDateChange) {
       const to = new Date()
-      const from = subMonths(to, 16)
-      onDateChange({ from, to })
+      const from = subMonths(to, 3)
+      onDateChange({ from, to, preset: "Last 3 months" })
+      setSelectionMethod("preset")
+      setSelectedPreset("Last 3 months")
     }
   }, [defaultValue, onDateChange])
 
@@ -73,16 +77,22 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
     month.toLowerCase().includes(monthSearch.toLowerCase())
   )
 
-  const handlePresetClick = (days: number) => {
-    const to = new Date()
-    const from = new Date()
-    from.setDate(to.getDate() - days)
-    const newRange = { from, to }
-    setSelectedRange(newRange)
-    if (onDateChange) {
-      onDateChange(newRange)
+  const formatDateDisplay = () => {
+    if (!selectedRange?.from) return "Select date range"
+
+    if (selectionMethod === "preset" && selectedPreset) {
+      return selectedPreset
     }
-    setIsOpen(false)
+
+    switch (selectionMethod) {
+      case "month":
+        return format(selectedRange.from, "MMMM yyyy")
+      case "calendar":
+      default:
+        return selectedRange.to 
+          ? `${format(selectedRange.from, "MMM d, yyyy")} - ${format(selectedRange.to, "MMM d, yyyy")}`
+          : format(selectedRange.from, "MMM d, yyyy")
+    }
   }
 
   const handleMonthSelect = (monthStr: string) => {
@@ -91,8 +101,24 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
     const to = new Date(from.getFullYear(), from.getMonth() + 1, 0)
     const newRange = { from, to }
     setSelectedRange(newRange)
+    setSelectionMethod("month")
+    setSelectedPreset("")
     if (onDateChange) {
-      onDateChange(newRange)
+      onDateChange({ ...newRange, preset: undefined })
+    }
+    setIsOpen(false)
+  }
+
+  const handlePresetClick = (days: number, label: string) => {
+    const to = new Date()
+    const from = new Date()
+    from.setDate(to.getDate() - days)
+    const newRange = { from, to }
+    setSelectedRange(newRange)
+    setSelectionMethod("preset")
+    setSelectedPreset(label)
+    if (onDateChange) {
+      onDateChange({ ...newRange, preset: label })
     }
     setIsOpen(false)
   }
@@ -109,17 +135,7 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
           )}
         >
           <Calendar className="h-4 w-4" />
-          <span>
-            {selectedRange?.from ? (
-              selectedRange.to ? (
-                `${format(selectedRange.from, "MMM d, yyyy")} - ${format(selectedRange.to, "MMM d, yyyy")}`
-              ) : (
-                format(selectedRange.from, "MMM d, yyyy")
-              )
-            ) : (
-              "Select date range"
-            )}
-          </span>
+          <span>{formatDateDisplay()}</span>
         </div>
       </PopoverTrigger>
       <PopoverContent 
@@ -153,7 +169,7 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
                 key={preset.days}
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => handlePresetClick(preset.days)}
+                onClick={() => handlePresetClick(preset.days, preset.label)}
               >
                 {preset.label}
               </Button>
@@ -189,107 +205,57 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
 
         {activeView === "calendar" && (
           <div>
-            <div className="mb-4 flex justify-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-primary"></div>
-                <span className="text-sm">
-                  From: {selectedRange?.from ? format(selectedRange.from, "MMM d, yyyy") : "Select date"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-primary"></div>
-                <span className="text-sm">
-                  To: {selectedRange?.to ? format(selectedRange.to, "MMM d, yyyy") : "Select date"}
-                </span>
-              </div>
-            </div>
-            <div className="[&_.rdp]:bg-background [&_.rdp-caption]:mb-4 [&_.rdp-caption_select]:hidden [&_.rdp-nav]:hidden [&_.rdp-table]:w-full [&_.rdp-head_cell]:text-muted-foreground [&_.rdp-cell]:p-0 [&_.rdp-tbody]:divide-y [&_.rdp-row]:divide-x [&_.rdp-day]:h-12 [&_.rdp-day]:w-12 [&_.rdp-day]:text-sm [&_.rdp-day]:font-normal [&_.rdp-day]:transition-colors [&_.rdp-day]:cursor-pointer [&_.rdp-day_button]:h-full [&_.rdp-day_button]:w-full [&_.rdp-day_button]:p-0 [&_.rdp-day_button]:font-normal [&_.rdp-day_selected]:bg-primary [&_.rdp-day_selected]:text-primary-foreground [&_.rdp-day_today]:border-2 [&_.rdp-day_today]:border-primary [&_.rdp-day_outside]:text-muted-foreground/50 [&_.rdp-day_outside]:opacity-50 [&_.rdp-day_range_start]:bg-primary [&_.rdp-day_range_start]:text-primary-foreground [&_.rdp-day_range_end]:bg-primary [&_.rdp-day_range_end]:text-primary-foreground [&_.rdp-day_range_middle]:bg-accent/50 [&_.rdp-day_range_middle]:text-accent-foreground [&_.rdp-cell]:border-border [&_.rdp-head_cell]:h-12 [&_.rdp-head_cell]:w-12 [&_.rdp-tbody]:border-x [&_.rdp-tbody]:border-b [&_.rdp-head]:border-x [&_.rdp-head]:border-t [&_.rdp-button]:flex [&_.rdp-button]:h-full [&_.rdp-button]:w-full [&_.rdp-button]:items-center [&_.rdp-button]:justify-center [&_.rdp-day]:flex [&_.rdp-day]:items-center [&_.rdp-day]:justify-center [&_.rdp-day]:p-0 [&_.rdp-day]:relative [&_.rdp-day_button]:absolute [&_.rdp-day_button]:inset-0 [&_.rdp-day_button]:flex [&_.rdp-day_button]:items-center [&_.rdp-day_button]:justify-center [&_.rdp-head_cell]:flex [&_.rdp-head_cell]:items-center [&_.rdp-head_cell]:justify-center [&_.rdp-cell]:flex [&_.rdp-cell]:items-center [&_.rdp-cell]:justify-center [&_.rdp-day_button]:hover:bg-accent [&_.rdp-day_button]:hover:text-accent-foreground">
-              <CalendarComponent
-                mode="range"
-                selected={selectedRange}
-                onSelect={(value: DateRange | undefined) => {
-                  if (!value?.from) {
-                    setSelectedRange(undefined);
-                    return;
-                  }
-
-                  // If we don't have a from date yet, or we're starting a new selection
-                  if (!selectedRange?.from) {
-                    setSelectedRange({ from: value.from, to: undefined });
-                    return;
-                  }
-
-                  // If we have a from date but no to date, complete the range
-                  if (selectedRange.from && !selectedRange.to && value.from) {
-                    // Don't allow selecting the same date
-                    if (value.from.getTime() === selectedRange.from.getTime()) {
-                      return;
-                    }
-
-                    const newRange = {
-                      from: selectedRange.from,
-                      to: value.from
-                    };
-
-                    // Swap dates if needed
-                    if (newRange.from > newRange.to) {
-                      [newRange.from, newRange.to] = [newRange.to, newRange.from];
-                    }
-
-                    setSelectedRange(newRange);
-                    if (onDateChange) {
-                      onDateChange(newRange);
-                    }
-                    setTimeout(() => setIsOpen(false), 400);
-                    return;
-                  }
-
-                  // If we already have both dates, start a new selection
-                  if (selectedRange.from && selectedRange.to) {
-                    setSelectedRange({ from: value.from, to: undefined });
-                  }
-                }}
-                disabled={{ before: addMonths(new Date(), -12) }}
-                numberOfMonths={2}
-                defaultMonth={selectedRange?.from || new Date()}
-                showOutsideDays={false}
-                fixedWeeks
-                className="border-0"
-                classNames={{
-                  months: "flex space-x-2",
-                  month: "space-y-4",
-                  caption: "flex justify-center pt-1 relative items-center",
-                  caption_label: "text-sm font-medium",
-                  nav: "flex items-center justify-between",
-                  nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-                  nav_button_previous: "absolute left-1",
-                  nav_button_next: "absolute right-1",
-                  table: "w-full border-collapse space-y-1",
-                  head_row: "flex",
-                  head_cell: "text-muted-foreground rounded-md w-12 font-medium text-[0.8rem] h-12 flex items-center justify-center",
-                  row: "flex w-full mt-2",
-                  cell: "relative flex h-12 w-12 items-center justify-center p-0",
-                  day: "h-12 w-12 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground",
-                  day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                  day_today: "border-2 border-primary font-medium",
-                  day_outside: "text-muted-foreground opacity-50",
-                  day_disabled: "text-muted-foreground opacity-50",
-                  day_hidden: "invisible",
-                  day_range_middle: "bg-accent/50 text-accent-foreground hover:bg-accent hover:text-accent-foreground",
-                  day_range_end: "bg-primary text-primary-foreground rounded-r-md",
-                  day_range_start: "bg-primary text-primary-foreground rounded-l-md"
-                }}
-                footer={
-                  <div className="mt-3 text-sm font-medium text-muted-foreground">
-                    {selectedRange?.from && !selectedRange?.to ? (
-                      <span className="text-primary">Now select the end date</span>
-                    ) : !selectedRange?.from ? (
-                      "Select start date"
-                    ) : null}
-                  </div>
+            <CalendarComponent
+              mode="range"
+              selected={selectedRange}
+              onSelect={(value: DateRange | undefined) => {
+                if (!value?.from) {
+                  setSelectedRange(undefined)
+                  return
                 }
-              />
-            </div>
+
+                if (!selectedRange?.from) {
+                  setSelectedRange({ from: value.from, to: undefined })
+                  return
+                }
+
+                if (selectedRange.from && !selectedRange.to && value.from) {
+                  if (value.from.getTime() === selectedRange.from.getTime()) {
+                    return
+                  }
+
+                  const newRange = {
+                    from: selectedRange.from,
+                    to: value.from
+                  }
+
+                  if (newRange.from > newRange.to) {
+                    [newRange.from, newRange.to] = [newRange.to, newRange.from]
+                  }
+
+                  setSelectedRange(newRange)
+                  setSelectionMethod("calendar")
+                  setSelectedPreset("")
+                  if (onDateChange) {
+                    onDateChange({ ...newRange, preset: undefined })
+                  }
+                  setTimeout(() => setIsOpen(false), 400)
+                  return
+                }
+
+                if (selectedRange.from && selectedRange.to) {
+                  setSelectedRange({ from: value.from, to: undefined })
+                  setSelectedPreset("")
+                  setSelectionMethod("calendar")
+                }
+              }}
+              disabled={{ before: addMonths(new Date(), -12) }}
+              numberOfMonths={2}
+              defaultMonth={selectedRange?.from || new Date()}
+              showOutsideDays={false}
+              fixedWeeks
+              className="border-0"
+            />
           </div>
         )}
       </PopoverContent>
