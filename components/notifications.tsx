@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 
 export interface Notification {
   id: string
-  type: 'content-milestone' | 'content-ranking' | 'author-achievement'
+  type: 'content-milestone' | 'content-ranking' | 'author-achievement' | 'content-health'
   title: string
   message: string
   timestamp: Date
@@ -24,6 +24,7 @@ export interface Notification {
     articleTitle?: string
     authorName?: string
     rank?: number
+    url?: string
   }
 }
 

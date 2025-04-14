@@ -140,10 +140,7 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className={cn(
-          "p-4",
-          activeView === "calendar" ? "w-[800px]" : "w-[400px]"
-        )}
+        className="w-[800px] p-4" 
         align="start"
         side="bottom"
         sideOffset={5}

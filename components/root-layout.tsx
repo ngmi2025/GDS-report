@@ -14,70 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
-import { useEffect } from "react"
-
-const sampleNotifications = [
-  {
-    id: 'milestone-1',
-    type: 'content-milestone',
-    title: '🎉 Content Milestone Achieved!',
-    message: '"10 Best Credit Cards for Travel" has reached 100,000 visits!',
-    timestamp: new Date(),
-    read: false,
-    data: {
-      metric: 100000,
-      articleTitle: '10 Best Credit Cards for Travel'
-    }
-  },
-  {
-    id: 'ranking-1',
-    type: 'content-ranking',
-    title: '👑 New #1 Content!',
-    message: '"Chase Sapphire Preferred Review" is now the best performing content!',
-    timestamp: new Date(),
-    read: false,
-    data: {
-      articleTitle: 'Chase Sapphire Preferred Review',
-      rank: 1
-    }
-  },
-  {
-    id: 'achievement-1',
-    type: 'author-achievement',
-    title: '⚡ Viral Content Achievement!',
-    message: 'John Smith has achieved an impressive 8.5% CTR!',
-    timestamp: new Date(),
-    read: false,
-    data: {
-      authorName: 'John Smith',
-      metric: 8.5
-    }
-  },
-  {
-    id: 'achievement-2',
-    type: 'author-achievement',
-    title: '🚀 High Impact Achievement!',
-    message: 'Sarah Johnson is averaging 2,500 clicks per article!',
-    timestamp: new Date(),
-    read: false,
-    data: {
-      authorName: 'Sarah Johnson',
-      metric: 2500
-    }
-  },
-  {
-    id: 'achievement-3',
-    type: 'author-achievement',
-    title: '✍️ Prolific Author Milestone!',
-    message: 'Mike Wilson has published 75 articles!',
-    timestamp: new Date(),
-    read: false,
-    data: {
-      authorName: 'Mike Wilson',
-      metric: 75
-    }
-  }
-];
 
 export function RootLayoutClient({
   children,
@@ -94,16 +30,6 @@ export function RootLayoutClient({
     const body = encodeURIComponent(`Check out these Google Discover stats: ${window.location.href}`);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
-
-  useEffect(() => {
-    // Get a random notification
-    const randomNotification = sampleNotifications[Math.floor(Math.random() * sampleNotifications.length)];
-    // Update timestamp to current time
-    randomNotification.timestamp = new Date();
-    // Add to notifications
-    const event = new CustomEvent('addNotification', { detail: randomNotification });
-    window.dispatchEvent(event);
-  }, []);
 
   return (
     <ThemeProvider
