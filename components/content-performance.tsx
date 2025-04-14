@@ -284,16 +284,17 @@ export function ContentPerformance({ sheetName }: ContentPerformanceProps) {
           {/* Search and Filter Section */}
           <div className="mt-4 space-y-4">
             <div className="flex items-center gap-4">
-              <div className="flex-1">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Search articles..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-sm"
+                  className="pl-8"
                 />
               </div>
-              <div className="w-[200px]">
+              <div className="w-[200px] flex-shrink-0">
                 <Select
                   value={selectedAuthor}
                   onValueChange={setSelectedAuthor}

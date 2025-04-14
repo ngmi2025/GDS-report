@@ -118,7 +118,7 @@ export default function Sidebar() {
       )}
     >
       {/* Top toggle button */}
-      <div className="flex items-center justify-center h-16 border-b border-gray-700">
+      <div className="flex items-center h-16 border-b border-gray-700 px-2">
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="text-white focus:outline-none hover:bg-gray-600 rounded-md p-2 transition"
@@ -168,12 +168,14 @@ export default function Sidebar() {
                   <CalendarYear year={shortYear} />
                   {!collapsed && (
                     <>
-                      <span className="flex-1">{yearSection.label}</span>
-                      {yearExpanded[Number(year)] ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
+                      <span className="flex-1 text-left">{yearSection.label}</span>
+                      <div className="flex-shrink-0">
+                        {yearExpanded[Number(year)] ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </div>
                     </>
                   )}
                 </button>

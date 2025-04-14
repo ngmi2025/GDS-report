@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ChevronLeft, ChevronRight, Medal, ChevronUp, ChevronDown, Search, Rocket, Zap, Pencil, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Medal, Search, Rocket, Zap, Pencil, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSheetData } from "@/lib/hooks/useSheetData"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -75,6 +75,16 @@ interface FilterOption {
   predicate: (author: AuthorStats) => boolean;
   tooltip: string;
 }
+
+// Add SortIcon component before the AuthorPerformance component
+const SortIcon = ({ field, currentField, direction }: { field: string, currentField: string, direction: 'asc' | 'desc' }) => {
+  if (currentField !== field) {
+    return <ArrowUpDown className="inline h-4 w-4 ml-2" />;
+  }
+  return direction === 'asc' 
+    ? <ArrowUp className="inline h-4 w-4 ml-2" />
+    : <ArrowDown className="inline h-4 w-4 ml-2" />;
+};
 
 export function AuthorPerformance({ sheetName }: AuthorPerformanceProps) {
   const { data, loading, error } = useSheetData<any>(sheetName)
@@ -397,30 +407,35 @@ export function AuthorPerformance({ sheetName }: AuthorPerformanceProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Author</TableHead>
-              <TableHead className="text-center cursor-pointer" onClick={() => handleSort('totalArticles')}>
-                Articles {sortConfig.field === 'totalArticles' && (
-                  sortConfig.direction === 'desc' ? <ChevronDown className="inline h-4 w-4" /> : <ChevronUp className="inline h-4 w-4" />
-                )}
+              <TableHead className="text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort('totalArticles')}>
+                <div className="flex items-center justify-center">
+                  Articles
+                  <SortIcon field="totalArticles" currentField={sortConfig.field} direction={sortConfig.direction} />
+                </div>
               </TableHead>
-              <TableHead className="text-center cursor-pointer" onClick={() => handleSort('totalClicks')}>
-                Total Clicks {sortConfig.field === 'totalClicks' && (
-                  sortConfig.direction === 'desc' ? <ChevronDown className="inline h-4 w-4" /> : <ChevronUp className="inline h-4 w-4" />
-                )}
+              <TableHead className="text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort('totalClicks')}>
+                <div className="flex items-center justify-center">
+                  Total Clicks
+                  <SortIcon field="totalClicks" currentField={sortConfig.field} direction={sortConfig.direction} />
+                </div>
               </TableHead>
-              <TableHead className="text-center cursor-pointer" onClick={() => handleSort('totalImpressions')}>
-                Total Impressions {sortConfig.field === 'totalImpressions' && (
-                  sortConfig.direction === 'desc' ? <ChevronDown className="inline h-4 w-4" /> : <ChevronUp className="inline h-4 w-4" />
-                )}
+              <TableHead className="text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort('totalImpressions')}>
+                <div className="flex items-center justify-center">
+                  Total Impressions
+                  <SortIcon field="totalImpressions" currentField={sortConfig.field} direction={sortConfig.direction} />
+                </div>
               </TableHead>
-              <TableHead className="text-center cursor-pointer" onClick={() => handleSort('averageCTR')}>
-                Average CTR {sortConfig.field === 'averageCTR' && (
-                  sortConfig.direction === 'desc' ? <ChevronDown className="inline h-4 w-4" /> : <ChevronUp className="inline h-4 w-4" />
-                )}
+              <TableHead className="text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort('averageCTR')}>
+                <div className="flex items-center justify-center">
+                  Average CTR
+                  <SortIcon field="averageCTR" currentField={sortConfig.field} direction={sortConfig.direction} />
+                </div>
               </TableHead>
-              <TableHead className="text-center cursor-pointer" onClick={() => handleSort('avgClicksPerArticle')}>
-                Avg Clicks / Article {sortConfig.field === 'avgClicksPerArticle' && (
-                  sortConfig.direction === 'desc' ? <ChevronDown className="inline h-4 w-4" /> : <ChevronUp className="inline h-4 w-4" />
-                )}
+              <TableHead className="text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort('avgClicksPerArticle')}>
+                <div className="flex items-center justify-center">
+                  Avg Clicks / Article
+                  <SortIcon field="avgClicksPerArticle" currentField={sortConfig.field} direction={sortConfig.direction} />
+                </div>
               </TableHead>
             </TableRow>
           </TableHeader>
