@@ -10,13 +10,19 @@ interface SearchConsoleMetrics {
 
 interface SearchConsoleData {
   current: SearchConsoleMetrics
-  previous: SearchConsoleMetrics | null // Make previous optional
+  previous: SearchConsoleMetrics | null
   changes: {
     clicks: number | null
     impressions: number | null
     ctr: number | null
   }
-  warnings?: string[] // Add warnings for date range issues
+  warnings?: string[]
+  rows?: Array<{
+    keys: string[]
+    clicks: number
+    impressions: number
+    ctr: number
+  }>
 }
 
 const DATA_RETENTION_DAYS = 496 // ~16 months
@@ -138,7 +144,8 @@ export function useSearchConsoleData(dateRange: DateRange) {
           current: currentMetrics,
           previous: previousMetrics,
           changes,
-          warnings
+          warnings,
+          rows: currentResult.rows // Include the daily data for the trends chart
         })
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred')
