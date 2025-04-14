@@ -1,12 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { Calendar, Search } from "lucide-react"
-import { format, addMonths, subMonths } from "date-fns"
+import { Calendar as CalendarIcon, Search } from "lucide-react"
+import { format, addMonths, subMonths, startOfMonth, endOfMonth } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
 import {
   Popover,
   PopoverContent,
@@ -20,7 +21,6 @@ interface UnifiedDateSelectorProps {
 }
 
 type ViewType = "presets" | "months" | "calendar"
-type SelectionMethod = "preset" | "month" | "calendar"
 
 const PRESET_RANGES = [
   { label: "Last 7 days", days: 7 },
@@ -29,38 +29,21 @@ const PRESET_RANGES = [
   { label: "Last 16 months", days: 485 }, // ~16 months (485 days)
 ]
 
+const DEFAULT_DATE_RANGE: DateRange = {
+  from: subMonths(new Date(), 3),
+  to: new Date()
+}
+
 export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateSelectorProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const [activeView, setActiveView] = React.useState<ViewType>("presets")
-  const [selectionMethod, setSelectionMethod] = React.useState<SelectionMethod>("calendar")
-  const [selectedPreset, setSelectedPreset] = React.useState<string>("")
-  const [selectedRange, setSelectedRange] = React.useState<DateRange | undefined>(() => {
-    if (!defaultValue) {
-      const to = new Date()
-      const from = subMonths(to, 3)
-      return { from, to }
-    }
-    return defaultValue
-  })
+  const [selectedRange, setSelectedRange] = React.useState<DateRange>(
+    defaultValue?.from && defaultValue?.to 
+      ? { from: defaultValue.from, to: defaultValue.to }
+      : DEFAULT_DATE_RANGE
+  )
+  const [selectedPreset, setSelectedPreset] = React.useState<string>(defaultValue?.preset || "")
   const [monthSearch, setMonthSearch] = React.useState("")
-
-  // Initialize with 3-month range if no defaultValue
-  React.useEffect(() => {
-    if (!defaultValue && onDateChange) {
-      const to = new Date()
-      const from = subMonths(to, 3)
-      onDateChange({ from, to, preset: "Last 3 months" })
-      setSelectionMethod("preset")
-      setSelectedPreset("Last 3 months")
-    }
-  }, [defaultValue, onDateChange])
-
-  // Reset to presets view when opening
-  React.useEffect(() => {
-    if (isOpen) {
-      setActiveView("presets")
-    }
-  }, [isOpen])
 
   // Generate list of months (current month and 11 previous months)
   const months = React.useMemo(() => {
@@ -78,30 +61,23 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
   )
 
   const formatDateDisplay = () => {
-    if (!selectedRange?.from) return "Select date range"
+    if (!selectedRange.from) return "Select date range"
 
-    if (selectionMethod === "preset" && selectedPreset) {
+    if (selectedPreset && activeView !== "calendar") {
       return selectedPreset
     }
 
-    switch (selectionMethod) {
-      case "month":
-        return format(selectedRange.from, "MMMM yyyy")
-      case "calendar":
-      default:
-        return selectedRange.to 
-          ? `${format(selectedRange.from, "MMM d, yyyy")} - ${format(selectedRange.to, "MMM d, yyyy")}`
-          : format(selectedRange.from, "MMM d, yyyy")
-    }
+    return selectedRange.to 
+      ? `${format(selectedRange.from, "MMM d, yyyy")} - ${format(selectedRange.to, "MMM d, yyyy")}`
+      : format(selectedRange.from, "MMM d, yyyy")
   }
 
   const handleMonthSelect = (monthStr: string) => {
     const [month, year] = monthStr.split(" ")
-    const from = new Date(`${month} 1, ${year}`)
-    const to = new Date(from.getFullYear(), from.getMonth() + 1, 0)
+    const from = startOfMonth(new Date(`${month} 1, ${year}`))
+    const to = endOfMonth(from)
     const newRange = { from, to }
     setSelectedRange(newRange)
-    setSelectionMethod("month")
     setSelectedPreset("")
     if (onDateChange) {
       onDateChange({ ...newRange, preset: undefined })
@@ -115,12 +91,37 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
     from.setDate(to.getDate() - days)
     const newRange = { from, to }
     setSelectedRange(newRange)
-    setSelectionMethod("preset")
     setSelectedPreset(label)
     if (onDateChange) {
       onDateChange({ ...newRange, preset: label })
     }
     setIsOpen(false)
+  }
+
+  const handleCalendarSelect = (dates: [Date | null, Date | null]) => {
+    const [start, end] = dates
+    if (!start) return
+
+    const today = new Date()
+    const sixteenMonthsAgo = subMonths(today, 16)
+    
+    // Ensure the selected range is within bounds
+    const from = start < sixteenMonthsAgo ? sixteenMonthsAgo : start
+    const to = end || start
+    
+    // Validate the range
+    if (to > today) return // Don't allow future dates
+    if (from > to) return // Don't allow invalid ranges
+    
+    const newRange = { from, to }
+    setSelectedRange(newRange)
+    setSelectedPreset("")
+    
+    if (end) {
+      if (onDateChange) {
+        onDateChange({ ...newRange, preset: undefined })
+      }
+    }
   }
 
   return (
@@ -134,12 +135,15 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
             isOpen && "ring-2 ring-ring ring-offset-2"
           )}
         >
-          <Calendar className="h-4 w-4" />
+          <CalendarIcon className="h-4 w-4" />
           <span>{formatDateDisplay()}</span>
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[480px] p-4" 
+        className={cn(
+          "p-4",
+          activeView === "calendar" ? "w-[800px]" : "w-[400px]"
+        )}
         align="start"
         side="bottom"
         sideOffset={5}
@@ -168,7 +172,10 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
               <Button
                 key={preset.days}
                 variant="outline"
-                className="w-full justify-start"
+                className={cn(
+                  "w-full justify-start",
+                  selectedPreset === preset.label && "bg-accent text-accent-foreground"
+                )}
                 onClick={() => handlePresetClick(preset.days, preset.label)}
               >
                 {preset.label}
@@ -193,7 +200,10 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
                 <Button
                   key={month}
                   variant="ghost"
-                  className="w-full justify-start"
+                  className={cn(
+                    "w-full justify-start",
+                    selectedRange.from && format(selectedRange.from, "MMMM yyyy") === month && "bg-accent text-accent-foreground"
+                  )}
                   onClick={() => handleMonthSelect(month)}
                 >
                   {month}
@@ -204,58 +214,82 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
         )}
 
         {activeView === "calendar" && (
-          <div>
-            <CalendarComponent
-              mode="range"
-              selected={selectedRange}
-              onSelect={(value: DateRange | undefined) => {
-                if (!value?.from) {
-                  setSelectedRange(undefined)
-                  return
-                }
-
-                if (!selectedRange?.from) {
-                  setSelectedRange({ from: value.from, to: undefined })
-                  return
-                }
-
-                if (selectedRange.from && !selectedRange.to && value.from) {
-                  if (value.from.getTime() === selectedRange.from.getTime()) {
-                    return
-                  }
-
-                  const newRange = {
-                    from: selectedRange.from,
-                    to: value.from
-                  }
-
-                  if (newRange.from > newRange.to) {
-                    [newRange.from, newRange.to] = [newRange.to, newRange.from]
-                  }
-
-                  setSelectedRange(newRange)
-                  setSelectionMethod("calendar")
-                  setSelectedPreset("")
-                  if (onDateChange) {
-                    onDateChange({ ...newRange, preset: undefined })
-                  }
-                  setTimeout(() => setIsOpen(false), 400)
-                  return
-                }
-
-                if (selectedRange.from && selectedRange.to) {
-                  setSelectedRange({ from: value.from, to: undefined })
-                  setSelectedPreset("")
-                  setSelectionMethod("calendar")
-                }
-              }}
-              disabled={{ before: addMonths(new Date(), -12) }}
-              numberOfMonths={2}
-              defaultMonth={selectedRange?.from || new Date()}
-              showOutsideDays={false}
-              fixedWeeks
-              className="border-0"
-            />
+          <div className="space-y-4">
+            <div className="flex gap-8 justify-between">
+              <div className="flex-1">
+                <div className="mb-2 text-sm font-medium flex items-center justify-between">
+                  <span>Start Date</span>
+                  {selectedRange.from && (
+                    <span className="text-muted-foreground">
+                      {format(selectedRange.from, "MMM d, yyyy")}
+                    </span>
+                  )}
+                </div>
+                <DatePicker
+                  selected={selectedRange.from}
+                  onChange={(date) => {
+                    if (!date) return
+                    const newRange = {
+                      from: date,
+                      to: selectedRange.to && date > selectedRange.to ? date : selectedRange.to
+                    }
+                    setSelectedRange(newRange)
+                    setSelectedPreset("")
+                    if (newRange.to) {
+                      onDateChange?.({ ...newRange, preset: undefined })
+                    }
+                  }}
+                  selectsStart
+                  startDate={selectedRange.from}
+                  endDate={selectedRange.to}
+                  maxDate={selectedRange.to || new Date()}
+                  minDate={subMonths(new Date(), 16)}
+                  calendarClassName="!border-0 !shadow-none"
+                  className="!w-full !border-0"
+                  showPopperArrow={false}
+                  inline
+                  dateFormat="MMM d, yyyy"
+                />
+              </div>
+              <div className="flex-1">
+                <div className="mb-2 text-sm font-medium flex items-center justify-between">
+                  <span>End Date</span>
+                  {selectedRange.to && (
+                    <span className="text-muted-foreground">
+                      {format(selectedRange.to, "MMM d, yyyy")}
+                    </span>
+                  )}
+                </div>
+                <DatePicker
+                  selected={selectedRange.to}
+                  onChange={(date) => {
+                    if (!date) return
+                    const newRange = {
+                      from: selectedRange.from || date,
+                      to: date
+                    }
+                    setSelectedRange(newRange)
+                    setSelectedPreset("")
+                    if (newRange.from) {
+                      onDateChange?.({ ...newRange, preset: undefined })
+                    }
+                  }}
+                  selectsEnd
+                  startDate={selectedRange.from}
+                  endDate={selectedRange.to}
+                  minDate={selectedRange.from || subMonths(new Date(), 16)}
+                  maxDate={new Date()}
+                  calendarClassName="!border-0 !shadow-none"
+                  className="!w-full !border-0"
+                  showPopperArrow={false}
+                  inline
+                  dateFormat="MMM d, yyyy"
+                />
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground text-center">
+              Select start and end dates within the last 16 months
+            </div>
           </div>
         )}
       </PopoverContent>

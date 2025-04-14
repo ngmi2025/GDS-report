@@ -43,11 +43,12 @@ export default function MonthPage() {
     // Create a base date with the correct year
     let date = parse(monthStr, 'MMM', new Date())
     // Set the year explicitly
-    const fullYear = yearStr.length === 2 ? `20${yearStr}` : yearStr
-    monthDate = setYear(date, parseInt(fullYear))
+    monthDate = setYear(date, parseInt(yearStr.length === 2 ? `20${yearStr}` : yearStr))
   } catch (error) {
     console.error('Error parsing month:', error)
-    monthDate = new Date() // Fallback to current date
+    const currentDate = new Date()
+    router.push(`/${format(currentDate, 'MMM-yy').toLowerCase()}`)
+    return null
   }
 
   // Create date range for the month

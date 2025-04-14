@@ -2,7 +2,8 @@ import { getToken } from "next-auth/jwt"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-export async function middleware(request: NextRequest) {
+// Export the middleware function as default
+export default async function middleware(request: NextRequest) {
   const token = await getToken({ req: request })
   const isAuth = !!token
   const isAuthPage = request.nextUrl.pathname.startsWith("/login")
@@ -24,4 +25,9 @@ export async function middleware(request: NextRequest) {
       new URL(`/login?from=${encodeURIComponent(from)}`, request.url)
     )
   }
+}
+
+// Add matcher configuration
+export const config = {
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
 } 
