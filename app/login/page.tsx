@@ -7,9 +7,11 @@ import { useSearchParams } from "next/navigation"
 function LoginContent() {
   const searchParams = useSearchParams()
   const error = searchParams.get("error")
+  const errorDescription = searchParams.get("error_description")
 
   const handleSignIn = async () => {
     try {
+      console.log('Starting Google sign-in...');
       await signIn("google", {
         callbackUrl: "/dashboard",
         redirect: true,
@@ -19,16 +21,34 @@ function LoginContent() {
     }
   }
 
+  const getErrorMessage = (error: string) => {
+    switch (error) {
+      case "OAuthCallback":
+        return "There was a problem with the Google sign-in. This could be due to incorrect OAuth configuration or network issues. Please try again."
+      case "OAuthSignin":
+        return "Error starting the Google sign-in process. Please try again."
+      case "OAuthAccountNotLinked":
+        return "This email is already associated with another sign-in method."
+      case "AccessDenied":
+        return "Access was denied. Please make sure to grant the necessary permissions."
+      case "Configuration":
+        return "There is a problem with the server configuration. Please contact support."
+      default:
+        return errorDescription || "An unexpected error occurred during sign in."
+    }
+  }
+
   return (
     <div className="bg-white p-8 rounded-lg shadow-md text-center space-y-4">
       <h1 className="text-2xl font-semibold text-gray-900">Welcome</h1>
       <p className="text-gray-600">Sign in to access your dashboard</p>
       {error && (
-        <p className="text-sm text-red-500">
-          {error === "OAuthCallback" 
-            ? "There was a problem with the Google sign-in. Please try again." 
-            : "An error occurred during sign in."}
-        </p>
+        <div className="text-sm text-red-500 space-y-1">
+          <p className="font-medium">{getErrorMessage(error)}</p>
+          {process.env.NODE_ENV === 'development' && (
+            <p className="text-xs opacity-75">Error code: {error}</p>
+          )}
+        </div>
       )}
       <button
         onClick={handleSignIn}

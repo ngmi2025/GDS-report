@@ -2,6 +2,14 @@ import { NextAuthOptions } from 'next-auth';
 import NextAuth from 'next-auth/next';
 import GoogleProvider from 'next-auth/providers/google';
 
+// Debug logging
+console.log('Auth Configuration:', {
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID?.slice(0, 10) + '...',
+  hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+  NODE_ENV: process.env.NODE_ENV,
+});
+
 // Extend the built-in session type
 declare module "next-auth" {
   interface Session {
@@ -40,12 +48,27 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ account, profile }) {
+      // Debug logging
+      console.log('Sign In Attempt:', {
+        hasAccount: !!account,
+        hasProfile: !!profile,
+        email: profile?.email,
+      });
+      
       if (account && profile) {
         return true;
       }
       return false;
     },
     async jwt({ token, account }) {
+      // Debug logging
+      console.log('JWT Callback:', {
+        hasToken: !!token,
+        hasAccount: !!account,
+        accessToken: account?.access_token ? 'present' : 'missing',
+        refreshToken: account?.refresh_token ? 'present' : 'missing',
+      });
+      
       if (account) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
@@ -53,13 +76,21 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      // Debug logging
+      console.log('Session Callback:', {
+        hasSession: !!session,
+        hasToken: !!token,
+        accessToken: token.accessToken ? 'present' : 'missing',
+        refreshToken: token.refreshToken ? 'present' : 'missing',
+      });
+      
       session.accessToken = token.accessToken;
       session.refreshToken = token.refreshToken;
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Log the redirect attempt
-      console.log('Redirect callback:', { url, baseUrl });
+      // Debug logging
+      console.log('Redirect Callback:', { url, baseUrl });
       
       // If the URL starts with the base URL or is a relative path, allow it
       if (url.startsWith(baseUrl) || url.startsWith('/')) {
@@ -76,7 +107,7 @@ export const authOptions: NextAuthOptions = {
     signIn: '/login',
     error: '/error',
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: true, // Enable debug mode
   secret: process.env.NEXTAUTH_SECRET,
 }
 
