@@ -1,12 +1,13 @@
-import NextAuth from "next-auth"
-import GoogleProvider from "next-auth/providers/google"
-import { NextAuthOptions } from "next-auth"
+import { NextAuthOptions } from 'next-auth';
+import NextAuth from 'next-auth/next';
+import GoogleProvider from 'next-auth/providers/google';
 
 // Extend the built-in session type
 declare module "next-auth" {
   interface Session {
     accessToken?: string
     error?: "RefreshAccessTokenError"
+    refreshToken?: string
   }
 }
 
@@ -26,9 +27,9 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          access_type: "offline",
-          prompt: "consent",
-          scope: "openid email profile https://www.googleapis.com/auth/webmasters.readonly",
+          scope: 'https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/webmasters https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/analytics',
+          access_type: 'offline',
+          prompt: 'consent',
         },
       },
     }),
@@ -38,60 +39,17 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, account, user }) {
-      if (account && user) {
-        return {
-          ...token,
-          accessToken: account.access_token,
-          refreshToken: account.refresh_token,
-          accessTokenExpires: account.expires_at ? account.expires_at * 1000 : undefined,
-        }
+    async jwt({ token, account }) {
+      if (account) {
+        token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token;
       }
-
-      // Return previous token if the access token has not expired yet
-      if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
-        return token
-      }
-
-      // Access token has expired, try to refresh it
-      if (!token.refreshToken) {
-        throw new Error("No refresh token available")
-      }
-
-      try {
-        const response = await fetch("https://oauth2.googleapis.com/token", {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: process.env.GOOGLE_CLIENT_ID!,
-            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-            grant_type: "refresh_token",
-            refresh_token: token.refreshToken,
-          }),
-          method: "POST",
-        })
-
-        const tokens = await response.json()
-
-        if (!response.ok) {
-          throw tokens
-        }
-
-        return {
-          ...token,
-          accessToken: tokens.access_token,
-          accessTokenExpires: Date.now() + (tokens.expires_in ?? 3600) * 1000,
-        }
-      } catch (error) {
-        console.error("Error refreshing access token", error)
-        return { ...token, error: "RefreshAccessTokenError" }
-      }
+      return token;
     },
     async session({ session, token }) {
-      if (token.error) {
-        session.error = "RefreshAccessTokenError"
-      }
-      session.accessToken = token.accessToken
-      return session
+      session.accessToken = token.accessToken;
+      session.refreshToken = token.refreshToken;
+      return session;
     },
     async redirect({ url, baseUrl }) {
       // Allows relative callback URLs
