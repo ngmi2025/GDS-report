@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface ContentPerformanceProps {
   sheetName: string;
+  className?: string;
 }
 
 interface SheetRow extends ContentSheetData {
@@ -113,7 +114,7 @@ const getAchievementIcon = (clicks: number) => {
   return null;
 };
 
-export function ContentPerformance({ sheetName }: ContentPerformanceProps) {
+export function ContentPerformance({ sheetName, className }: ContentPerformanceProps) {
   const { data, loading: isLoading, error } = useSheetData<ContentSheetData>(sheetName);
   const [mounted, setMounted] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -210,7 +211,7 @@ export function ContentPerformance({ sheetName }: ContentPerformanceProps) {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className={className}>
         <CardHeader>
           <CardTitle>Content Performance</CardTitle>
           <CardDescription>
@@ -252,7 +253,7 @@ export function ContentPerformance({ sheetName }: ContentPerformanceProps) {
 
   if (error) {
     return (
-      <Card>
+      <Card className={className}>
         <CardHeader>
           <CardTitle>Content Performance</CardTitle>
           <CardDescription>
@@ -270,7 +271,7 @@ export function ContentPerformance({ sheetName }: ContentPerformanceProps) {
   }
 
   return (
-    <Card className="col-span-3">
+    <Card className={className}>
       <CardHeader>
         <div className="flex flex-col space-y-2">
           <CardTitle>Content Performance</CardTitle>

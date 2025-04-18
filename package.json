@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth/core": "^0.38.0",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.4",
@@ -52,13 +53,14 @@
     "next": "15.2.4",
     "next-auth": "^4.24.11",
     "next-themes": "latest",
+    "openai": "^4.95.0",
     "react": "^19",
     "react-datepicker": "^8.3.0",
     "react-day-picker": "latest",
     "react-dom": "^19",
     "react-hook-form": "^7.54.1",
     "react-resizable-panels": "^2.1.7",
-    "recharts": "latest",
+    "recharts": "^2.15.2",
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",

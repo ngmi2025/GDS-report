@@ -5,7 +5,7 @@ import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { Menu, BarChart3, CalendarDays, ChevronDown, ChevronRight, LucideIcon } from "lucide-react"
+import { Menu, BarChart3, CalendarDays, ChevronDown, ChevronRight, LucideIcon, Lightbulb } from "lucide-react"
 
 // Custom CalendarYear icon component
 function CalendarYear({ year, className }: { year: string, className?: string }) {
@@ -53,6 +53,7 @@ type YearSection = {
 type NavItems = {
   overview: NavItem
   [key: number]: YearSection
+  insights: NavItem
 }
 
 type YearExpandedState = {
@@ -64,21 +65,26 @@ const navItems: NavItems = {
   2025: {
     label: "2025",
     items: [
-      { label: "Apr 25", icon: CalendarDays, href: "/apr-2025" },
-      { label: "Mar 25", icon: CalendarDays, href: "/mar-2025" },
-      { label: "Feb 25", icon: CalendarDays, href: "/feb-2025" },
-      { label: "Jan 25", icon: CalendarDays, href: "/jan-2025" },
+      { label: "Apr 25", icon: CalendarDays, href: "/dashboard/apr-2025" },
+      { label: "Mar 25", icon: CalendarDays, href: "/dashboard/mar-2025" },
+      { label: "Feb 25", icon: CalendarDays, href: "/dashboard/feb-2025" },
+      { label: "Jan 25", icon: CalendarDays, href: "/dashboard/jan-2025" },
     ]
   },
   2024: {
     label: "2024",
     items: [
-      { label: "Dec 24", icon: CalendarDays, href: "/dec-2024" },
-      { label: "Nov 24", icon: CalendarDays, href: "/nov-2024" },
-      { label: "Oct 24", icon: CalendarDays, href: "/oct-2024" },
-      { label: "Sep 24", icon: CalendarDays, href: "/sep-2024" },
-      { label: "Aug 24", icon: CalendarDays, href: "/aug-2024" }
+      { label: "Dec 24", icon: CalendarDays, href: "/dashboard/dec-2024" },
+      { label: "Nov 24", icon: CalendarDays, href: "/dashboard/nov-2024" },
+      { label: "Oct 24", icon: CalendarDays, href: "/dashboard/oct-2024" },
+      { label: "Sep 24", icon: CalendarDays, href: "/dashboard/sep-2024" },
+      { label: "Aug 24", icon: CalendarDays, href: "/dashboard/aug-2024" }
     ]
+  },
+  insights: {
+    label: "Insights",
+    icon: Lightbulb,
+    href: "/dashboard/insights"
   }
 }
 
@@ -146,12 +152,12 @@ export default function Sidebar() {
 
         {/* Year sections */}
         {Object.entries(navItems)
-          .filter(([key]) => key !== 'overview')
+          .filter(([key]) => key !== 'overview' && key !== 'insights')
           .sort(([yearA], [yearB]) => Number(yearB) - Number(yearA))
           .map(([year, section]) => {
             const yearSection = section as YearSection
             const isActiveYear = activeYear === year
-            const shortYear = year.slice(2) // Get last 2 digits (e.g., "25" from "2025")
+            const shortYear = year.slice(2)
             
             return (
               <div key={year} className="space-y-1">
@@ -203,6 +209,20 @@ export default function Sidebar() {
               </div>
             )
           })}
+
+        {/* Insights link */}
+        <Link
+          href={navItems.insights.href}
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            pathname === navItems.insights.href
+              ? "bg-gray-700 text-white"
+              : "text-gray-400 hover:bg-gray-700 hover:text-white"
+          )}
+        >
+          <navItems.insights.icon className="h-5 w-5" />
+          {!collapsed && <span>{navItems.insights.label}</span>}
+        </Link>
       </div>
     </aside>
   )
