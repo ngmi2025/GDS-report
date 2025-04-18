@@ -39,6 +39,12 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
+    async signIn({ account, profile }) {
+      if (account && profile) {
+        return true;
+      }
+      return false;
+    },
     async jwt({ token, account }) {
       if (account) {
         token.accessToken = account.access_token;
@@ -52,20 +58,28 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url
-      return baseUrl
+      // Log the redirect attempt
+      console.log('Redirect callback:', { url, baseUrl });
+      
+      // If the URL starts with the base URL or is a relative path, allow it
+      if (url.startsWith(baseUrl) || url.startsWith('/')) {
+        console.log('Redirecting to:', url);
+        return url;
+      }
+      
+      // Default redirect to dashboard
+      console.log('Redirecting to default:', `${baseUrl}/dashboard`);
+      return `${baseUrl}/dashboard`;
     }
   },
   pages: {
     signIn: '/login',
     error: '/error',
   },
+  debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
 }
 
-const handler = NextAuth(authOptions)
+const handler = NextAuth(authOptions);
 
-export { handler as GET, handler as POST }
+export { handler as GET, handler as POST };
