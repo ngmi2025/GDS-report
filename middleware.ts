@@ -8,26 +8,30 @@ export default async function middleware(request: NextRequest) {
   const isAuth = !!token
   const isAuthPage = request.nextUrl.pathname.startsWith("/login")
 
+  // Protect dashboard routes
+  if (request.nextUrl.pathname.startsWith("/dashboard")) {
+    if (!isAuth) {
+      return NextResponse.redirect(new URL("/login", request.url))
+    }
+    return NextResponse.next()
+  }
+
+  // Handle auth pages
   if (isAuthPage) {
     if (isAuth) {
-      return NextResponse.redirect(new URL("/", request.url))
+      return NextResponse.redirect(new URL("/dashboard", request.url))
     }
-    return null
+    return NextResponse.next()
   }
 
-  if (!isAuth) {
-    let from = request.nextUrl.pathname
-    if (request.nextUrl.search) {
-      from += request.nextUrl.search
-    }
-
-    return NextResponse.redirect(
-      new URL(`/login?from=${encodeURIComponent(from)}`, request.url)
-    )
-  }
+  // Allow public access to other pages
+  return NextResponse.next()
 }
 
 // Add matcher configuration
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
+  matcher: [
+    '/dashboard/:path*',
+    '/login'
+  ]
 } 
