@@ -146,7 +146,7 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
         sideOffset={5}
       >
         <div className="mb-4 flex rounded-lg bg-muted p-1">
-          {["presets", "months", "calendar"].map((view) => (
+          {["presets", "months"].map((view) => (
             <Button
               key={view}
               variant={activeView === view ? "secondary" : "ghost"}
