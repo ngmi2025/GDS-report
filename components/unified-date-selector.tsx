@@ -140,7 +140,7 @@ export function UnifiedDateSelector({ onDateChange, defaultValue }: UnifiedDateS
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[800px] p-4" 
+        className="w-[400px] p-4" 
         align="start"
         side="bottom"
         sideOffset={5}
