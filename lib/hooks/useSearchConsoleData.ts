@@ -30,7 +30,28 @@ const DATA_RETENTION_DAYS = 496 // ~16 months
 // Cache for storing API responses
 const responseCache = new Map<string, any>()
 
-export function useSearchConsoleData(dateRange: DateRange) {
+// Map preset labels to cache keys
+const PRESET_TO_KEY: Record<string, string> = {
+  'Last 7 days': 'last-7-days',
+  'Last 28 days': 'last-28-days',
+  'Last 3 months': 'last-3-months',
+  'Last 16 months': 'last-16-months',
+}
+
+function getCacheKey(dateRange: DateRange & { preset?: string }) {
+  if (dateRange.preset && PRESET_TO_KEY[dateRange.preset]) {
+    return PRESET_TO_KEY[dateRange.preset]
+  }
+  // If it's a month, format as yyyy-MM
+  if (dateRange.from && dateRange.to && dateRange.from.getDate() === 1 && dateRange.to.getDate() > 27) {
+    // Month key
+    return `${dateRange.from.getFullYear()}-${String(dateRange.from.getMonth() + 1).padStart(2, '0')}`
+  }
+  // Fallback to last-3-months
+  return 'last-3-months'
+}
+
+export function useSearchConsoleData(dateRange: DateRange & { preset?: string }) {
   const [data, setData] = useState<SearchConsoleData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -69,7 +90,7 @@ export function useSearchConsoleData(dateRange: DateRange) {
         const isPreviousPeriodAvailable = isAfter(previousStart, oldestAvailableDate)
 
         // Generate cache keys
-        const currentCacheKey = `${format(dateRange.from, 'yyyy-MM-dd')}-${format(dateRange.to, 'yyyy-MM-dd')}`
+        const currentCacheKey = getCacheKey(dateRange)
         const previousCacheKey = `${format(previousStart, 'yyyy-MM-dd')}-${format(previousEnd, 'yyyy-MM-dd')}`
 
         // Fetch current period data
@@ -78,7 +99,7 @@ export function useSearchConsoleData(dateRange: DateRange) {
           currentResult = responseCache.get(currentCacheKey)
         } else {
           const currentResponse = await fetch(
-            `/api/search-console?startDate=${format(dateRange.from, 'yyyy-MM-dd')}&endDate=${format(dateRange.to, 'yyyy-MM-dd')}`
+            `/api/gsc-cache?range=${currentCacheKey}`
           )
 
           if (!currentResponse.ok) {
@@ -113,7 +134,7 @@ export function useSearchConsoleData(dateRange: DateRange) {
             previousResult = responseCache.get(previousCacheKey)
           } else {
             const previousResponse = await fetch(
-              `/api/search-console?startDate=${format(previousStart, 'yyyy-MM-dd')}&endDate=${format(previousEnd, 'yyyy-MM-dd')}`
+              `/api/gsc-cache?range=${previousCacheKey}`
             )
 
             if (previousResponse.ok) {
@@ -156,7 +177,7 @@ export function useSearchConsoleData(dateRange: DateRange) {
     }
 
     fetchData()
-  }, [dateRange])
+  }, [dateRange.from?.toISOString(), dateRange.to?.toISOString(), dateRange.preset])
 
   return { data, loading, error }
 }

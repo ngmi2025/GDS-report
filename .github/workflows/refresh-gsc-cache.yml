@@ -1,0 +1,14 @@
+name: Refresh GSC Cache
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh-gsc-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST to /api/gsc-cache
+        run: |
+          curl -X POST https://v0-new-project-71ztkearewb.vercel.app/api/gsc-cache 
