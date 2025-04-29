@@ -1,0 +1,8 @@
+{
+  "cron": [
+    {
+      "path": "/api/gsc-cache",
+      "schedule": "0 6 * * *"
+    }
+  ]
+} 
